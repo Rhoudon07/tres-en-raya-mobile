@@ -29,7 +29,9 @@
           "resizeMode": "contain",
           "backgroundColor": "#141721"
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-asset"
     ]
   }
 }

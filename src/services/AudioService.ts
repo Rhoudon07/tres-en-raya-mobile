@@ -1,4 +1,4 @@
-import { Audio } from 'expo-av';
+import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 
 /**
  * Generador procedural de ondas de audio en memoria.
@@ -84,19 +84,32 @@ function createArpeggioSamples(freqs: number[], noteDurationSec: number, volume:
 
 export class AudioService {
   private static enabled: boolean = true;
-  private static clickUri: string | null = null;
-  private static moveXUri: string | null = null;
-  private static moveOUri: string | null = null;
-  private static winUri: string | null = null;
-  private static drawUri: string | null = null;
+  private static clickPlayer: AudioPlayer | null = null;
+  private static moveXPlayer: AudioPlayer | null = null;
+  private static moveOPlayer: AudioPlayer | null = null;
+  private static winPlayer: AudioPlayer | null = null;
+  private static drawPlayer: AudioPlayer | null = null;
+  private static initialized: boolean = false;
 
   public static init() {
-    if (!this.clickUri) {
-      this.clickUri = createToneSamples(900.0, 0.04, 0.35);
-      this.moveXUri = createToneSamples(680.0, 0.08, 0.45);
-      this.moveOUri = createToneSamples(520.0, 0.09, 0.45);
-      this.winUri = createArpeggioSamples([523.25, 659.25, 783.99, 1046.50], 0.08, 0.5);
-      this.drawUri = createArpeggioSamples([293.66, 220.00], 0.12, 0.4);
+    if (this.initialized) return;
+    this.initialized = true;
+    try {
+      if (typeof createAudioPlayer === 'function') {
+        const clickUri = createToneSamples(900.0, 0.04, 0.35);
+        const moveXUri = createToneSamples(680.0, 0.08, 0.45);
+        const moveOUri = createToneSamples(520.0, 0.09, 0.45);
+        const winUri = createArpeggioSamples([523.25, 659.25, 783.99, 1046.50], 0.08, 0.5);
+        const drawUri = createArpeggioSamples([293.66, 220.00], 0.12, 0.4);
+
+        this.clickPlayer = createAudioPlayer(clickUri);
+        this.moveXPlayer = createAudioPlayer(moveXUri);
+        this.moveOPlayer = createAudioPlayer(moveOUri);
+        this.winPlayer = createAudioPlayer(winUri);
+        this.drawPlayer = createAudioPlayer(drawUri);
+      }
+    } catch {
+      // Ignorar de forma segura si el hardware o módulo nativo aún no está inicializado
     }
   }
 
@@ -108,45 +121,36 @@ export class AudioService {
     return this.enabled;
   }
 
-  private static async playUri(uri: string | null) {
-    if (!this.enabled || !uri) return;
+  private static play(player: AudioPlayer | null) {
+    if (!this.enabled) return;
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true }
-      );
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
+      this.init();
+      if (player) {
+        player.seekTo(0).catch(() => {});
+        player.play();
+      }
     } catch {
-      // Ignorar fallos de audio si el hardware no está disponible
+      // Audio nunca debe romper el ciclo del juego
     }
   }
 
   public static playClick() {
-    this.init();
-    this.playUri(this.clickUri);
+    this.play(this.clickPlayer);
   }
 
   public static playMoveX() {
-    this.init();
-    this.playUri(this.moveXUri);
+    this.play(this.moveXPlayer);
   }
 
   public static playMoveO() {
-    this.init();
-    this.playUri(this.moveOUri);
+    this.play(this.moveOPlayer);
   }
 
   public static playWin() {
-    this.init();
-    this.playUri(this.winUri);
+    this.play(this.winPlayer);
   }
 
   public static playDraw() {
-    this.init();
-    this.playUri(this.drawUri);
+    this.play(this.drawPlayer);
   }
 }
