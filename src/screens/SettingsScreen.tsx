@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, Switch } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { BoardType } from '../types/board';
 import { Difficulty } from '../types/ai';
