@@ -1,0 +1,32 @@
+node_modules/
+.expo/
+dist/
+web-build/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Native artifacts
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+
+# Keys & Secrets
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# macOS & Windows system files
+.DS_Store
+Thumbs.db
+Desktop.ini
