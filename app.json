@@ -15,7 +15,8 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#141721"
       },
-      "package": "com.rhoudon.tresenraya"
+      "package": "com.rhoudon.tresenraya",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/icon.png"
