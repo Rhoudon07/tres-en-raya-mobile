@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView } from 'react-native';
 import { Colors } from '../constants/colors';
 import { BoardType } from '../types/board';
@@ -19,40 +19,67 @@ interface ReviewScreenProps {
 
 export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
   const boardType = useGameStore((state) => state.boardType);
-  const moveHistory = useGameStore((state) => state.moveHistory);
+  const moveHistory = useGameStore((state) => state.moveHistory || []);
   const generateReviewReport = useGameStore((state) => state.generateReviewReport);
 
-  const report = useMemo(() => generateReviewReport(), [boardType, moveHistory]);
+  const totalSteps = moveHistory.length;
+  const [currentStep, setCurrentStep] = useState<number>(totalSteps);
 
-  const [currentStep, setCurrentStep] = useState<number>(moveHistory.length);
+  // Sincronizar el paso actual cada vez que cambia el historial de movimientos
+  useEffect(() => {
+    setCurrentStep(totalSteps);
+  }, [totalSteps]);
 
-  // Reconstruir el estado del tablero hasta el paso actual
+  // Paso seguro garantizado dentro de [0, totalSteps]
+  const safeStep = Math.max(0, Math.min(currentStep, totalSteps));
+
+  const report = useMemo(() => {
+    try {
+      return generateReviewReport();
+    } catch {
+      return { analyses: [], accuracyX: 100, accuracyO: 100, moveHistory: [] };
+    }
+  }, [boardType, moveHistory]);
+
+  // Reconstruir el estado del tablero hasta el paso actual de forma estrictamente segura
   const simBoard = useMemo(() => {
     const b = new BoardModel(boardType);
-    for (let i = 0; i < currentStep; ++i) {
+    for (let i = 0; i < safeStep; ++i) {
       const move = moveHistory[i];
-      b.makeMove(move.pos, move.symbol);
+      if (move && move.pos && move.symbol) {
+        b.makeMove(move.pos, move.symbol);
+      }
     }
     return b;
-  }, [boardType, moveHistory, currentStep]);
+  }, [boardType, moveHistory, safeStep]);
 
   // Si estamos en el último paso y hubo ganador, obtener la línea ganadora
   const winningLine = useMemo(() => {
-    if (currentStep === moveHistory.length) {
+    if (safeStep === totalSteps && totalSteps > 0) {
       const { winner, winningLine: line } = simBoard.checkWinner();
       if (winner !== ' ' && winner !== 'D') {
         return line || null;
       }
     }
     return null;
-  }, [simBoard, currentStep, moveHistory.length]);
+  }, [simBoard, safeStep, totalSteps]);
 
-  const currentAnalysis = currentStep > 0 ? report.analyses[currentStep - 1] : null;
-  const currentTurnSymbol = currentStep > 0 ? moveHistory[currentStep - 1].symbol : '';
+  const currentAnalysis =
+    safeStep > 0 && report?.analyses && report.analyses[safeStep - 1]
+      ? report.analyses[safeStep - 1]
+      : null;
 
-  const suggestedCell = currentAnalysis && currentAnalysis.suggestedMove.x !== -1
-    ? currentAnalysis.suggestedMove
-    : null;
+  const currentTurnSymbol =
+    safeStep > 0 && moveHistory[safeStep - 1]
+      ? moveHistory[safeStep - 1].symbol
+      : '';
+
+  const suggestedCell =
+    currentAnalysis &&
+    currentAnalysis.suggestedMove &&
+    currentAnalysis.suggestedMove.x !== -1
+      ? currentAnalysis.suggestedMove
+      : null;
 
   const renderSimBoard = () => {
     switch (boardType) {
@@ -112,12 +139,15 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
         </View>
 
         {/* Barra de Precisión Global */}
-        <AccuracyBar accuracyX={report.accuracyX} accuracyO={report.accuracyO} />
+        <AccuracyBar
+          accuracyX={report?.accuracyX ?? 100}
+          accuracyO={report?.accuracyO ?? 100}
+        />
 
         {/* Tarjeta de la jugada actual */}
         <ReviewCard
-          currentStep={currentStep}
-          totalSteps={moveHistory.length}
+          currentStep={safeStep}
+          totalSteps={totalSteps}
           currentTurnSymbol={currentTurnSymbol}
           analysis={currentAnalysis}
         />
@@ -127,12 +157,12 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
 
         {/* Controles de Navegación jugada a jugada */}
         <ReviewControls
-          currentStep={currentStep}
-          totalSteps={moveHistory.length}
+          currentStep={safeStep}
+          totalSteps={totalSteps}
           onGoToStart={() => setCurrentStep(0)}
           onPrev={() => setCurrentStep((prev) => Math.max(0, prev - 1))}
-          onNext={() => setCurrentStep((prev) => Math.min(moveHistory.length, prev + 1))}
-          onGoToEnd={() => setCurrentStep(moveHistory.length)}
+          onNext={() => setCurrentStep((prev) => Math.min(totalSteps, prev + 1))}
+          onGoToEnd={() => setCurrentStep(totalSteps)}
         />
 
         {/* Botón para regresar al juego o menú */}

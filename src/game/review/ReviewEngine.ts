@@ -36,6 +36,7 @@ export class ReviewEngine {
 
     for (let i = 0; i < moveHistory.length; ++i) {
       const rec = moveHistory[i];
+      if (!rec || !rec.pos || !rec.symbol) continue;
       const curSym = rec.symbol;
       const oppSym = curSym === 'X' ? 'O' : 'X';
       const actualPos = rec.pos;
