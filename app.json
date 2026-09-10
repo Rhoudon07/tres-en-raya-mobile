@@ -16,7 +16,13 @@
         "backgroundColor": "#141721"
       },
       "package": "com.rhoudon.tresenraya",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "favicon": "./assets/icon.png"
@@ -33,6 +39,11 @@
       ],
       "expo-audio",
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5bca2b3e-510a-4d41-9cf5-7382cda67dd8"
+      }
+    }
   }
 }
