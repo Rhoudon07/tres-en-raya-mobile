@@ -298,8 +298,8 @@ export function getBestMove5x5(
     return strongDiagonals[Math.floor(Math.random() * strongDiagonals.length)];
   }
 
-  // 4. Minimax con profundidad adaptativa según estado del juego
-  const maxDepth = occupied >= 6 ? 3 : 2;
+  // 4. Minimax con profundidad adaptativa optimizada para respuesta táctica instantánea
+  const maxDepth = occupied >= 16 ? 3 : 2;
   let bestVal = -50000;
   const bestMoves: Vector4i[] = [];
 

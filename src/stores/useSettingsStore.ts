@@ -11,6 +11,7 @@ interface SettingsState {
   animationsEnabled: boolean;
   showCoordinates: boolean;
   difficulties: Record<BoardType, Difficulty>;
+  isLoaded: boolean;
 
   setSoundEnabled: (enabled: boolean) => void;
   setVibrationEnabled: (enabled: boolean) => void;
@@ -18,7 +19,7 @@ interface SettingsState {
   setShowCoordinates: (enabled: boolean) => void;
   setDifficultyFor: (type: BoardType, diff: Difficulty) => void;
   resetSettings: () => Promise<void>;
-  loadSettings: () => Promise<void>;
+  loadSettings: (force?: boolean) => Promise<void>;
 }
 
 const DEFAULT_DIFFICULTIES: Record<BoardType, Difficulty> = {
@@ -37,6 +38,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   animationsEnabled: true,
   showCoordinates: true,
   difficulties: { ...DEFAULT_DIFFICULTIES },
+  isLoaded: false,
 
   setSoundEnabled: (enabled: boolean) => {
     AudioService.setEnabled(enabled);
@@ -73,6 +75,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       animationsEnabled: true,
       showCoordinates: true,
       difficulties: { ...DEFAULT_DIFFICULTIES },
+      isLoaded: true,
     });
     AudioService.setEnabled(true);
     HapticService.setEnabled(true);
@@ -83,7 +86,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     await StorageService.removeItem('setting_difficulties');
   },
 
-  loadSettings: async () => {
+  loadSettings: async (force = false) => {
+    if (!force && get().isLoaded) return;
     const sound = await StorageService.getItem<boolean>('setting_sound', true);
     const vibration = await StorageService.getItem<boolean>('setting_vibration', true);
     const animations = await StorageService.getItem<boolean>('setting_animations', true);
@@ -102,6 +106,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       animationsEnabled: animations,
       showCoordinates: showCoords,
       difficulties: { ...DEFAULT_DIFFICULTIES, ...(diffs || {}) },
+      isLoaded: true,
     });
   },
 }));

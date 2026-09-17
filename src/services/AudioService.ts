@@ -14,7 +14,21 @@ export class AudioService {
   private static players: Record<string, AudioPlayer | null> = {};
 
   public static init() {
-    // Inicialización no bloqueante; los reproductores se instancian bajo demanda (lazy)
+    // Precalentamiento no bloqueante de los reproductores de audio en segundo plano
+    setTimeout(() => {
+      try {
+        if (typeof createAudioPlayer === 'function') {
+          const keys = Object.keys(SoundAssets) as (keyof typeof SoundAssets)[];
+          for (const k of keys) {
+            if (!this.players[k]) {
+              this.players[k] = createAudioPlayer(SoundAssets[k]);
+            }
+          }
+        }
+      } catch {
+        // Ignorar en entornos sin soporte nativo de audio
+      }
+    }, 100);
   }
 
   public static setEnabled(enabled: boolean) {

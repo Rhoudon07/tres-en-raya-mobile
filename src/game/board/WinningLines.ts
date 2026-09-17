@@ -396,6 +396,8 @@ function generateWinningLines4x4_3D(): Vector4i[][] {
   return lines;
 }
 
+export const coordToIndex = (p: Vector4i): number => p.x + p.y * 5 + p.z * 25 + p.w * 100;
+
 // Caches estáticos inicializados perezosamente
 let cached3x3: Vector4i[][] | null = null;
 let cached4x4: Vector4i[][] | null = null;
@@ -403,6 +405,8 @@ let cached3D: Vector4i[][] | null = null;
 let cached4D: Vector4i[][] | null = null;
 let cached4x4_3D: Vector4i[][] | null = null;
 let cached5x5: Vector4i[][] | null = null;
+
+const cachedIndices: Partial<Record<BoardType, number[][]>> = {};
 
 export function getWinningLines(type: BoardType): Vector4i[][] {
   switch (type) {
@@ -426,6 +430,14 @@ export function getWinningLines(type: BoardType): Vector4i[][] {
       if (!cached4x4_3D) cached4x4_3D = generateWinningLines4x4_3D();
       return cached4x4_3D;
   }
+}
+
+export function getWinningLineIndices(type: BoardType): number[][] {
+  if (!cachedIndices[type]) {
+    const lines = getWinningLines(type);
+    cachedIndices[type] = lines.map((line) => line.map(coordToIndex));
+  }
+  return cachedIndices[type]!;
 }
 
 /**

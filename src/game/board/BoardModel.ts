@@ -1,23 +1,24 @@
-import { BoardType, CellSymbol, Vector4i, areVectorsEqual } from '../../types/board';
-import { getWinningLines } from './WinningLines';
+import { BoardType, CellSymbol, Vector4i } from '../../types/board';
+import { getWinningLines, getWinningLineIndices, coordToIndex } from './WinningLines';
 
 /**
- * Modelo de datos puro del tablero.
- * Replica fielmente toda la lógica de Board.h y Board.cpp de C++.
+ * Modelo de datos puro del tablero con alta optimización de rendimiento.
+ * Utiliza un array lineal contiguo en memoria con indexación aritmética O(1)
+ * libre de asignaciones de strings en cada ciclo de Minimax.
  */
 export class BoardModel {
   public readonly type: BoardType;
   public readonly gridSize: number;
   public readonly winCondition: number;
 
-  // Representación interna en array lineal o 4D
-  // x: row (0..gridSize-1), y: col (0..gridSize-1), z: layer (0..2), w: universe (0..2)
-  private grid: Map<string, CellSymbol>;
+  // Representación interna en array lineal plano de 300 elementos:
+  // idx = x + y*5 + z*25 + w*100
+  private cells: CellSymbol[];
   private occupiedCount: number;
 
   constructor(type: BoardType = BoardType.TicTacToe3x3) {
     this.type = type;
-    this.grid = new Map<string, CellSymbol>();
+    this.cells = new Array(300).fill(' ');
     this.occupiedCount = 0;
 
     if (type === BoardType.Connect5x5) {
@@ -48,45 +49,41 @@ export class BoardModel {
     return this.type === BoardType.TicTacToe4D;
   }
 
-  private keyOf(pos: Vector4i): string {
-    return `${pos.x},${pos.y},${pos.z},${pos.w}`;
-  }
-
   public reset(): void {
-    this.grid.clear();
+    this.cells.fill(' ');
     this.occupiedCount = 0;
   }
 
   public getCell(pos: Vector4i): CellSymbol {
-    return this.grid.get(this.keyOf(pos)) || ' ';
+    return this.cells[pos.x + pos.y * 5 + pos.z * 25 + pos.w * 100] || ' ';
   }
 
   public getCell2D(r: number, c: number): CellSymbol {
-    return this.getCell({ x: r, y: c, z: 0, w: 0 });
+    return this.cells[r + c * 5] || ' ';
   }
 
   public getCell3D(r: number, c: number, z: number): CellSymbol {
-    return this.getCell({ x: r, y: c, z, w: 0 });
+    return this.cells[r + c * 5 + z * 25] || ' ';
   }
 
   public getCell4D(x: number, y: number, z: number, w: number): CellSymbol {
-    return this.getCell({ x, y, z, w });
+    return this.cells[x + y * 5 + z * 25 + w * 100] || ' ';
   }
 
   public isCellEmpty(pos: Vector4i): boolean {
-    return this.getCell(pos) === ' ';
+    return this.cells[pos.x + pos.y * 5 + pos.z * 25 + pos.w * 100] === ' ';
   }
 
   public isCellEmpty2D(r: number, c: number): boolean {
-    return this.isCellEmpty({ x: r, y: c, z: 0, w: 0 });
+    return this.cells[r + c * 5] === ' ';
   }
 
   public isCellEmpty3D(r: number, c: number, z: number): boolean {
-    return this.isCellEmpty({ x: r, y: c, z, w: 0 });
+    return this.cells[r + c * 5 + z * 25] === ' ';
   }
 
   public isCellEmpty4D(x: number, y: number, z: number, w: number): boolean {
-    return this.isCellEmpty({ x, y, z, w });
+    return this.cells[x + y * 5 + z * 25 + w * 100] === ' ';
   }
 
   public makeMove(pos: Vector4i, symbol: CellSymbol): boolean {
@@ -100,8 +97,9 @@ export class BoardModel {
       return false;
     }
 
-    if (this.isCellEmpty(pos)) {
-      this.grid.set(this.keyOf(pos), symbol);
+    const idx = pos.x + pos.y * 5 + pos.z * 25 + pos.w * 100;
+    if (this.cells[idx] === ' ') {
+      this.cells[idx] = symbol;
       this.occupiedCount++;
       return true;
     }
@@ -109,9 +107,9 @@ export class BoardModel {
   }
 
   public undoMove(pos: Vector4i): void {
-    const k = this.keyOf(pos);
-    if (this.grid.has(k) && this.grid.get(k) !== ' ') {
-      this.grid.delete(k);
+    const idx = pos.x + pos.y * 5 + pos.z * 25 + pos.w * 100;
+    if (this.cells[idx] !== ' ') {
+      this.cells[idx] = ' ';
       this.occupiedCount--;
     }
   }
@@ -146,25 +144,27 @@ export class BoardModel {
     return this.getLowestAvailableRow(col) === -1;
   }
 
-  // --- DETECCIÓN DE GANADOR ---
+  // --- DETECCIÓN DE GANADOR (Evaluación directa por índices contiguos) ---
 
   public checkWinner(): { winner: CellSymbol | 'D'; winningLine?: Vector4i[] } {
     const lines = getWinningLines(this.type);
+    const lineIndices = getWinningLineIndices(this.type);
 
-    for (const line of lines) {
-      const first = this.getCell(line[0]);
+    for (let l = 0; l < lineIndices.length; ++l) {
+      const idxs = lineIndices[l];
+      const first = this.cells[idxs[0]];
       if (first === ' ') continue;
 
       let allMatch = true;
-      for (let i = 1; i < line.length; ++i) {
-        if (this.getCell(line[i]) !== first) {
+      for (let i = 1; i < idxs.length; ++i) {
+        if (this.cells[idxs[i]] !== first) {
           allMatch = false;
           break;
         }
       }
 
       if (allMatch) {
-        return { winner: first, winningLine: line };
+        return { winner: first, winningLine: lines[l] };
       }
     }
 
@@ -178,7 +178,7 @@ export class BoardModel {
   public clone(): BoardModel {
     const copy = new BoardModel(this.type);
     copy.occupiedCount = this.occupiedCount;
-    this.grid.forEach((v, k) => copy.grid.set(k, v));
+    copy.cells = [...this.cells];
     return copy;
   }
 }

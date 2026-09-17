@@ -33,6 +33,7 @@ export const AppNavigator: React.FC = () => {
         contentStyle: { backgroundColor: Colors.background },
         animation: 'slide_from_right',
         gestureEnabled: false,
+        freezeOnBlur: true,
       }}
     >
       <Stack.Screen name="Home" component={HomeScreen} />
