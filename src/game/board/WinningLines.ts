@@ -396,6 +396,43 @@ function generateWinningLines4x4_3D(): Vector4i[][] {
   return lines;
 }
 
+// 6. Líneas Macro de Ultimate Tic-Tac-Toe (8 macro-líneas que conectan 3 mini-tableros)
+function generateWinningLinesUltimate(): Vector4i[][] {
+  const lines: Vector4i[][] = [];
+
+  // 3 Filas macro (w: fila macro, z: col macro)
+  for (let w = 0; w < 3; ++w) {
+    lines.push([
+      { x: 1, y: 1, z: 0, w },
+      { x: 1, y: 1, z: 1, w },
+      { x: 1, y: 1, z: 2, w },
+    ]);
+  }
+
+  // 3 Columnas macro
+  for (let z = 0; z < 3; ++z) {
+    lines.push([
+      { x: 1, y: 1, z, w: 0 },
+      { x: 1, y: 1, z, w: 1 },
+      { x: 1, y: 1, z, w: 2 },
+    ]);
+  }
+
+  // 2 Diagonales macro
+  lines.push([
+    { x: 1, y: 1, z: 0, w: 0 },
+    { x: 1, y: 1, z: 1, w: 1 },
+    { x: 1, y: 1, z: 2, w: 2 },
+  ]);
+  lines.push([
+    { x: 1, y: 1, z: 2, w: 0 },
+    { x: 1, y: 1, z: 1, w: 1 },
+    { x: 1, y: 1, z: 0, w: 2 },
+  ]);
+
+  return lines;
+}
+
 export const coordToIndex = (p: Vector4i): number => p.x + p.y * 5 + p.z * 25 + p.w * 100;
 
 // Caches estáticos inicializados perezosamente
@@ -405,16 +442,22 @@ let cached3D: Vector4i[][] | null = null;
 let cached4D: Vector4i[][] | null = null;
 let cached4x4_3D: Vector4i[][] | null = null;
 let cached5x5: Vector4i[][] | null = null;
+let cachedUltimate: Vector4i[][] | null = null;
 
 const cachedIndices: Partial<Record<BoardType, number[][]>> = {};
 
 export function getWinningLines(type: BoardType): Vector4i[][] {
   switch (type) {
     case BoardType.TicTacToe3x3:
+    case BoardType.Limited3x3:
+    case BoardType.Misere3x3:
+    case BoardType.Movement3x3:
+    case BoardType.TimeAttack3x3:
       if (!cached3x3) cached3x3 = generateWinningLines3x3();
       return cached3x3;
     case BoardType.Connect4x4:
     case BoardType.Gravity4x4:
+    case BoardType.Obstacles4x4:
       if (!cached4x4) cached4x4 = generateWinningLines4x4();
       return cached4x4;
     case BoardType.Connect5x5:
@@ -429,6 +472,9 @@ export function getWinningLines(type: BoardType): Vector4i[][] {
     case BoardType.TicTacToe4x4_3D:
       if (!cached4x4_3D) cached4x4_3D = generateWinningLines4x4_3D();
       return cached4x4_3D;
+    case BoardType.Ultimate:
+      if (!cachedUltimate) cachedUltimate = generateWinningLinesUltimate();
+      return cachedUltimate;
   }
 }
 

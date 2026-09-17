@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated } from 'react-native';
 import { Colors } from '../../constants/colors';
+import { CellSymbol } from '../../types/board';
 import { GameButton } from '../common/GameButton';
 
 interface ResultModalProps {
   visible: boolean;
   resultMessage: string;
-  winner: 'X' | 'O' | 'D' | ' ';
+  winner: CellSymbol | 'D';
   onPlayAgain: () => void;
   onAnalyze: () => void;
   onReturnToMenu: () => void;

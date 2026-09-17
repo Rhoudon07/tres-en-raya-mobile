@@ -49,6 +49,46 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ navigation }) => {
 
         <GameCard style={styles.card}>
           <View style={styles.modeRow}>
+            <Text style={styles.modeName}>FICHAS LIMITADAS (3 MÁX)</Text>
+            <Badge label="Cola FIFO" color="#f97316" />
+          </View>
+          <Text style={styles.modeDesc}>
+            Cada jugador solo puede tener 3 fichas activas simultáneamente en el tablero. Al colocar la cuarta, la ficha más antigua del jugador desaparece automáticamente (con preaviso visual ⏳).
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
+            <Text style={styles.modeName}>3x3 MISÈRE (INVERSO)</Text>
+            <Badge label="Inversión" color="#ef4444" />
+          </View>
+          <Text style={styles.modeDesc}>
+            Variante matemática inversa: hacer 3 en raya significa perder inmediatamente la partida. Requiere forzar al oponente a alinearse.
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
+            <Text style={styles.modeName}>3x3 MOVIMIENTO (TAPATAN)</Text>
+            <Badge label="Desplazamiento" color="#10b981" />
+          </View>
+          <Text style={styles.modeDesc}>
+            Fase de colocación de 3 fichas por bando seguida de desplazamiento táctico a casillas contiguas (distancia Chebyshev 1). Si un jugador no puede mover, queda inmovilizado y pierde.
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
+            <Text style={styles.modeName}>3x3 CONTRARRELOJ (BLITZ)</Text>
+            <Badge label="5s / Turno" color="#eab308" />
+          </View>
+          <Text style={styles.modeDesc}>
+            Tres en Raya con límite de tiempo de 5 segundos por turno. Temporizador desacoplado de cero latencia. Si el reloj del jugador llega a cero, pierde inmediatamente.
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
             <Text style={styles.modeName}>3x3x3 3D (QUBIC)</Text>
             <Badge label="49 Líneas" color={Colors.playerO} />
           </View>
@@ -94,6 +134,36 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ navigation }) => {
           </View>
           <Text style={styles.modeDesc}>
             Física de caída por columnas hasta la fila libre más baja con animación de rebote (ease-out bounce) y búsqueda Minimax a profundidad 6 con ordenación óptima [1, 2, 0, 3].
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
+            <Text style={styles.modeName}>ULTIMATE TIC-TAC-TOE</Text>
+            <Badge label="8 Macro-Líneas" color="#38bdf8" />
+          </View>
+          <Text style={styles.modeDesc}>
+            9 mini-tableros de Tres en Raya (81 casillas). La posición micro elegida determina el mini-tablero obligado para el rival. Se gana conquistando 3 mini-tableros en línea en el macro-tablero.
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
+            <Text style={styles.modeName}>4x4 CON OBSTÁCULOS</Text>
+            <Badge label="3 Rocas" color="#94a3b8" />
+          </View>
+          <Text style={styles.modeDesc}>
+            Tablero de 16 casillas con casillas de roca permanentes e intransitables generadas proceduralmente en zonas clave. Exige buscar rutas alternativas y desvía la simetría convencional.
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
+            <Text style={styles.modeName}>DESAFÍOS Y PUZZLES TÁCTICOS</Text>
+            <Badge label="Solitario" color="#f59e0b" />
+          </View>
+          <Text style={styles.modeDesc}>
+            Entrena tu visión táctica con posiciones críticas diseñadas a medida (mate en 1, bloqueo de tenedor, desvanecimiento, deslizamiento de piezas y obstáculos).
           </Text>
         </GameCard>
 

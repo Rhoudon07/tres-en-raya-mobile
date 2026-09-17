@@ -2,7 +2,7 @@
  * Tipos y estructuras del tablero
  */
 
-export type CellSymbol = 'X' | 'O' | ' ';
+export type CellSymbol = 'X' | 'O' | ' ' | '#';
 
 export enum BoardType {
   TicTacToe3x3 = 'TicTacToe3x3', // Tres en Raya clásico (3x3, 3 en línea libre)
@@ -12,6 +12,17 @@ export enum BoardType {
   TicTacToe4D = 'TicTacToe4D',   // Tres en Raya 3x3 en 4D (Teseracto 3x3x3x3, 81 casillas)
   TicTacToe4x4_3D = 'TicTacToe4x4_3D', // Cuatro en Raya 4x4 en 3D (Qubic 4x4x4, 4 pisos, 64 casillas)
   Connect5x5 = 'Connect5x5',     // Cinco en Raya libre (5x5, 5 en línea libre)
+  Ultimate = 'Ultimate',         // Ultimate Tic-Tac-Toe (9 mini-tableros 3x3, 81 casillas)
+  Limited3x3 = 'Limited3x3',     // Fichas Limitadas (máximo 3 fichas por jugador, la 4ª expulsa a la más antigua)
+  Misere3x3 = 'Misere3x3',       // Misère / Inverso (quien forma 3 en raya pierde)
+  Movement3x3 = 'Movement3x3',   // Tres en Raya con Movimiento (Colocación 3 fichas + desplazamiento adyacente)
+  TimeAttack3x3 = 'TimeAttack3x3', // Contrarreloj (Límite estricto de tiempo por turno o reloj total)
+  Obstacles4x4 = 'Obstacles4x4', // 4x4 con casillas bloqueadas / obstáculos (piedras fijas)
+}
+
+export interface MovementMove {
+  from: Vector4i;
+  to: Vector4i;
 }
 
 export interface Vector2i {

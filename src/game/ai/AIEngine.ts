@@ -1,5 +1,5 @@
 import { BoardModel } from '../board/BoardModel';
-import { BoardType, CellSymbol, Vector4i } from '../../types/board';
+import { BoardType, CellSymbol, Vector4i, MovementMove } from '../../types/board';
 import { Difficulty } from '../../types/ai';
 import { getBestMove3x3 } from './Minimax3x3';
 import { getBestMove4x4 } from './Minimax4x4';
@@ -8,6 +8,11 @@ import { getBestMove3D } from './Minimax3D';
 import { getBestMove4D } from './Minimax4D';
 import { getBestMove4x4_3D } from './Minimax4x4_3D';
 import { getBestMove5x5 } from './Minimax5x5';
+import { getBestMoveUltimate } from './MinimaxUltimate';
+import { getBestMoveLimited } from './MinimaxLimited';
+import { getBestMoveMisere } from './MinimaxMisere';
+import { getBestPlacementMove, getBestPieceMove } from './MinimaxMovement';
+import { getBestMoveObstacles } from './MinimaxObstacles';
 
 export class AIEngine {
   /**
@@ -21,7 +26,13 @@ export class AIEngine {
   ): Vector4i {
     switch (board.type) {
       case BoardType.TicTacToe3x3:
+      case BoardType.TimeAttack3x3:
         return getBestMove3x3(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.Movement3x3:
+        if (!board.isMovementPhase()) {
+          return getBestPlacementMove(board, aiSymbol, humanSymbol, difficulty);
+        }
+        return getBestPieceMove(board, aiSymbol, humanSymbol, difficulty).to;
       case BoardType.Connect4x4:
         return getBestMove4x4(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.Connect5x5:
@@ -34,9 +45,52 @@ export class AIEngine {
         return getBestMove4D(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.TicTacToe4x4_3D:
         return getBestMove4x4_3D(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.Ultimate:
+        return getBestMoveUltimate(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.Limited3x3:
+        return getBestMoveLimited(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.Misere3x3:
+        return getBestMoveMisere(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.Obstacles4x4:
+        return getBestMoveObstacles(board, aiSymbol, humanSymbol, difficulty);
       default:
         return { x: 0, y: 0, z: 0, w: 0 };
     }
+  }
+
+  /**
+   * Obtiene el mejor desplazamiento de pieza (from -> to) para la fase de movimiento.
+   */
+  public static getBestPieceMoveSync(
+    board: BoardModel,
+    aiSymbol: CellSymbol,
+    humanSymbol: CellSymbol,
+    difficulty: Difficulty = Difficulty.Hard
+  ): MovementMove {
+    return getBestPieceMove(board, aiSymbol, humanSymbol, difficulty);
+  }
+
+  /**
+   * Ejecuta el cálculo de desplazamiento de pieza de forma asíncrona.
+   */
+  public static async getBestPieceMoveAsync(
+    board: BoardModel,
+    aiSymbol: CellSymbol,
+    humanSymbol: CellSymbol,
+    difficulty: Difficulty = Difficulty.Hard,
+    simulatedDelayMs: number = 450
+  ): Promise<MovementMove> {
+    const start = Date.now();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const bestMove = this.getBestPieceMoveSync(board, aiSymbol, humanSymbol, difficulty);
+
+    const elapsed = Date.now() - start;
+    if (elapsed < simulatedDelayMs) {
+      await new Promise((resolve) => setTimeout(resolve, simulatedDelayMs - elapsed));
+    }
+
+    return bestMove;
   }
 
   /**

@@ -78,4 +78,8 @@ export class AudioService {
   public static playDraw() {
     this.playSound('draw');
   }
+
+  public static playTick() {
+    this.playSound('click');
+  }
 }

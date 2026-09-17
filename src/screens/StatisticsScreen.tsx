@@ -39,12 +39,18 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({ navigation }
 
   const modeNames: Record<BoardType, string> = {
     [BoardType.TicTacToe3x3]: '3x3 Clásico',
+    [BoardType.Limited3x3]: 'Fichas Limitadas (3 máx)',
+    [BoardType.Misere3x3]: '3x3 Misère (Inverso)',
+    [BoardType.Movement3x3]: '3x3 Movimiento (Tapatan)',
+    [BoardType.TimeAttack3x3]: '3x3 Contrarreloj (Blitz)',
     [BoardType.Connect4x4]: '4x4 Libre',
     [BoardType.Connect5x5]: '5x5 Libre',
     [BoardType.Gravity4x4]: '4x4 Gravedad',
     [BoardType.TicTacToe3D]: '3x3x3 3D (Qubic)',
     [BoardType.TicTacToe4x4_3D]: '4x4x4 3D (Qubic 4x4)',
     [BoardType.TicTacToe4D]: '3x3x3x3 4D (Teseracto)',
+    [BoardType.Ultimate]: 'Ultimate (9 Tableros)',
+    [BoardType.Obstacles4x4]: '4x4 con Obstáculos',
   };
 
   return (

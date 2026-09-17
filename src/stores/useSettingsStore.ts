@@ -30,6 +30,12 @@ const DEFAULT_DIFFICULTIES: Record<BoardType, Difficulty> = {
   [BoardType.TicTacToe3D]: Difficulty.Easy,
   [BoardType.TicTacToe4x4_3D]: Difficulty.Medium,
   [BoardType.TicTacToe4D]: Difficulty.Easy,
+  [BoardType.Ultimate]: Difficulty.Medium,
+  [BoardType.Limited3x3]: Difficulty.Medium,
+  [BoardType.Misere3x3]: Difficulty.Hard,
+  [BoardType.Movement3x3]: Difficulty.Hard,
+  [BoardType.TimeAttack3x3]: Difficulty.Medium,
+  [BoardType.Obstacles4x4]: Difficulty.Medium,
 };
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({

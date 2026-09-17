@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { BoardModel } from '../game/board/BoardModel';
-import { BoardType, CellSymbol, Vector4i } from '../types/board';
+import { BoardType, CellSymbol, Vector4i, areVectorsEqual } from '../types/board';
 import { GameMode, PlayerTurnOrder, Score } from '../types/game';
 import { MoveRecord, GameReviewReport } from '../types/review';
 import { AIEngine } from '../game/ai/AIEngine';
@@ -24,11 +24,17 @@ interface GameStoreState {
   moveHistory: MoveRecord[];
   reviewReport: GameReviewReport | null;
 
+  // Propiedad para selección de ficha en modalidad Movimiento
+  selectedPiece: Vector4i | null;
+
   // Acciones
   setBoardType: (type: BoardType) => void;
   startNewGame: (mode: GameMode, order?: PlayerTurnOrder) => void;
   restartCurrentGame: () => void;
+  selectPiece: (pos: Vector4i | null) => void;
   playMove: (pos: Vector4i) => Promise<boolean>;
+  playPieceMove: (from: Vector4i, to: Vector4i) => Promise<boolean>;
+  handleTimeout: (timedOutPlayer: CellSymbol) => void;
   executeCpuTurnIfNeeded: () => Promise<void>;
   generateReviewReport: () => GameReviewReport;
   resetScore: () => void;
@@ -47,6 +53,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   winningLine: null,
   moveHistory: [],
   reviewReport: null,
+  selectedPiece: null,
+
+  selectPiece: (pos: Vector4i | null) => {
+    set({ selectedPiece: pos });
+  },
 
   setBoardType: (type: BoardType) => {
     set({
@@ -58,6 +69,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       moveHistory: [],
       reviewReport: null,
       isCpuThinking: false,
+      selectedPiece: null,
     });
   },
 
@@ -81,6 +93,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       moveHistory: [],
       reviewReport: null,
       isCpuThinking: false,
+      selectedPiece: null,
     });
 
     // Si la CPU juega primero (TurnOrder.Second en PvCPU o en CPUvCPU)
@@ -103,6 +116,33 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   playMove: async (pos: Vector4i): Promise<boolean> => {
     const state = get();
     if (state.gameOver || state.isCpuThinking) return false;
+
+    // En modalidad Movimiento durante la fase de movimiento:
+    if (state.board.isMovement() && state.board.isMovementPhase()) {
+      const cellContent = state.board.getCell(pos);
+      const { selectedPiece } = state;
+
+      // 1. Tocar una ficha propia
+      if (cellContent === state.currentTurn) {
+        if (selectedPiece && areVectorsEqual(selectedPiece, pos)) {
+          // Deseleccionar si toca la misma
+          set({ selectedPiece: null });
+        } else {
+          // Seleccionar ficha
+          set({ selectedPiece: pos });
+          HapticService.selection();
+        }
+        return true;
+      }
+
+      // 2. Si hay una ficha seleccionada y toca una casilla vacía adyacente
+      if (selectedPiece && cellContent === ' ' && state.board.isAdjacent(selectedPiece, pos)) {
+        return get().playPieceMove(selectedPiece, pos);
+      }
+
+      HapticService.warning();
+      return false;
+    }
 
     // En 4x4 gravedad, ajustar la fila a la más baja disponible
     let actualPos = { ...pos };
@@ -138,7 +178,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     const { winner, winningLine } = state.board.checkWinner();
 
     if (winner !== ' ') {
-      // Partida terminada
       let msg = '';
       const newScore = { ...state.score };
 
@@ -163,13 +202,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         HapticService.mediumImpact();
       }
 
-      // Registrar estadísticas básicas inmediatamente
       const userSymbol = state.mode === GameMode.PvCPU
         ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
         : state.mode === GameMode.PvP ? 'X' : null;
       useStatsStore.getState().recordMatch(state.boardType, winner as 'X' | 'O' | 'D', userSymbol);
 
-      // Activar fin de juego inmediatamente: Modal de resultado aparece instantáneamente (0ms)
       const currentBoardType = state.boardType;
       set({
         board: state.board.clone(),
@@ -179,9 +216,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         winningLine: winningLine || null,
         score: newScore,
         reviewReport: null,
+        selectedPiece: null,
       });
 
-      // Ejecutar análisis de partida en segundo plano de forma asíncrona sin bloquear la UI
       setTimeout(() => {
         try {
           const report = ReviewEngine.analyzeGame(currentBoardType, updatedHistory);
@@ -194,7 +231,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             }
           }
         } catch {
-          // Análisis secundario no bloquea la experiencia de usuario
+          // No bloqueante
         }
       }, 50);
 
@@ -207,6 +244,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       board: state.board.clone(),
       currentTurn: nextTurn,
       moveHistory: updatedHistory,
+      selectedPiece: null,
     });
 
     // Despachar turno de CPU si corresponde
@@ -215,6 +253,175 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     }, 50);
 
     return true;
+  },
+
+  playPieceMove: async (from: Vector4i, to: Vector4i): Promise<boolean> => {
+    const state = get();
+    if (state.gameOver || state.isCpuThinking) return false;
+
+    const curSymbol = state.currentTurn;
+    const success = state.board.movePiece(from, to, curSymbol);
+    if (!success) return false;
+
+    if (curSymbol === 'X') {
+      AudioService.playMoveX();
+    } else {
+      AudioService.playMoveO();
+    }
+    HapticService.lightImpact();
+
+    const updatedHistory: MoveRecord[] = [
+      ...state.moveHistory,
+      { symbol: curSymbol, pos: to, from },
+    ];
+
+    // Comprobar ganador tras mover ficha
+    const { winner, winningLine } = state.board.checkWinner();
+
+    if (winner !== ' ') {
+      let msg = '';
+      const newScore = { ...state.score };
+
+      if (winner === 'X') {
+        newScore.xWins++;
+        msg = state.mode === GameMode.PvCPU
+          ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria! Has ganado' : 'La CPU (X) ha ganado')
+          : '¡Victoria para X!';
+        AudioService.playWin();
+        HapticService.success();
+      } else if (winner === 'O') {
+        newScore.oWins++;
+        msg = state.mode === GameMode.PvCPU
+          ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria! Has ganado' : 'La CPU (O) ha ganado')
+          : '¡Victoria para O!';
+        AudioService.playWin();
+        HapticService.success();
+      } else {
+        newScore.draws++;
+        msg = '¡Empate!';
+        AudioService.playDraw();
+        HapticService.mediumImpact();
+      }
+
+      const userSymbol = state.mode === GameMode.PvCPU
+        ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
+        : state.mode === GameMode.PvP ? 'X' : null;
+      useStatsStore.getState().recordMatch(state.boardType, winner as 'X' | 'O' | 'D', userSymbol);
+
+      const currentBoardType = state.boardType;
+      set({
+        board: state.board.clone(),
+        moveHistory: updatedHistory,
+        gameOver: true,
+        resultMessage: msg,
+        winningLine: winningLine || null,
+        score: newScore,
+        reviewReport: null,
+        selectedPiece: null,
+      });
+
+      setTimeout(() => {
+        try {
+          const report = ReviewEngine.analyzeGame(currentBoardType, updatedHistory);
+          const currentState = get();
+          if (currentState.gameOver && currentState.moveHistory === updatedHistory) {
+            set({ reviewReport: report });
+            const userAcc = userSymbol === 'X' ? report.accuracyX : userSymbol === 'O' ? report.accuracyO : undefined;
+            if (typeof userAcc === 'number') {
+              useStatsStore.getState().updateLastMatchAccuracy(currentBoardType, userAcc);
+            }
+          }
+        } catch {
+          // No bloqueante
+        }
+      }, 50);
+
+      return true;
+    }
+
+    // Verificar si el siguiente jugador queda inmovilizado (sin movimientos legales)
+    const nextTurn = curSymbol === 'X' ? 'O' : 'X';
+    if (state.board.getValidPieceMoves(nextTurn).length === 0) {
+      // El rival no puede mover -> ¡Pierde por inmovilización!
+      let msg = '';
+      const newScore = { ...state.score };
+      if (curSymbol === 'X') {
+        newScore.xWins++;
+        msg = '¡Victoria para X! (Oponente inmovilizado)';
+        AudioService.playWin();
+        HapticService.success();
+      } else {
+        newScore.oWins++;
+        msg = '¡Victoria para O! (Oponente inmovilizado)';
+        AudioService.playWin();
+        HapticService.success();
+      }
+
+      const userSymbol = state.mode === GameMode.PvCPU
+        ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
+        : state.mode === GameMode.PvP ? 'X' : null;
+      useStatsStore.getState().recordMatch(state.boardType, curSymbol as 'X' | 'O', userSymbol);
+
+      set({
+        board: state.board.clone(),
+        moveHistory: updatedHistory,
+        gameOver: true,
+        resultMessage: msg,
+        score: newScore,
+        selectedPiece: null,
+      });
+
+      return true;
+    }
+
+    set({
+      board: state.board.clone(),
+      currentTurn: nextTurn,
+      moveHistory: updatedHistory,
+      selectedPiece: null,
+    });
+
+    setTimeout(() => {
+      get().executeCpuTurnIfNeeded();
+    }, 50);
+
+    return true;
+  },
+
+  handleTimeout: (timedOutPlayer: CellSymbol) => {
+    const state = get();
+    if (state.gameOver) return;
+
+    const winner: 'X' | 'O' = timedOutPlayer === 'X' ? 'O' : 'X';
+    let msg = '';
+    const newScore = { ...state.score };
+    if (winner === 'X') {
+      newScore.xWins++;
+      msg = state.mode === GameMode.PvCPU
+        ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria por tiempo! Has ganado' : 'La CPU (X) ha ganado por tiempo')
+        : '¡Victoria por tiempo para X!';
+      AudioService.playWin();
+      HapticService.success();
+    } else {
+      newScore.oWins++;
+      msg = state.mode === GameMode.PvCPU
+        ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria por tiempo! Has ganado' : 'La CPU (O) ha ganado por tiempo')
+        : '¡Victoria por tiempo para O!';
+      AudioService.playWin();
+      HapticService.success();
+    }
+
+    const userSymbol = state.mode === GameMode.PvCPU
+      ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
+      : state.mode === GameMode.PvP ? 'X' : null;
+    useStatsStore.getState().recordMatch(state.boardType, winner, userSymbol);
+
+    set({
+      gameOver: true,
+      resultMessage: msg,
+      score: newScore,
+      selectedPiece: null,
+    });
   },
 
   executeCpuTurnIfNeeded: async () => {
@@ -236,13 +443,16 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     const humanSymbol = aiSymbol === 'X' ? 'O' : 'X';
 
     try {
-      const bestMove = await AIEngine.getBestMoveAsync(state.board, aiSymbol, humanSymbol, diff, 450);
-      set({ isCpuThinking: false });
+      if (state.board.isMovement() && state.board.isMovementPhase()) {
+        const bestPieceMove = await AIEngine.getBestPieceMoveAsync(state.board, aiSymbol, humanSymbol, diff, 450);
+        set({ isCpuThinking: false });
+        await get().playPieceMove(bestPieceMove.from, bestPieceMove.to);
+      } else {
+        const bestMove = await AIEngine.getBestMoveAsync(state.board, aiSymbol, humanSymbol, diff, 450);
+        set({ isCpuThinking: false });
+        await get().playMove(bestMove);
+      }
 
-      // Ejecutar la jugada
-      await get().playMove(bestMove);
-
-      // En CPU vs CPU, programar siguiente movimiento con un pequeño delay
       if (get().mode === GameMode.CPUvCPU && !get().gameOver) {
         setTimeout(() => {
           get().executeCpuTurnIfNeeded();

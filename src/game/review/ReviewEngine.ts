@@ -7,7 +7,10 @@ import { AIEngine } from '../ai/AIEngine';
 import { Colors } from '../../constants/colors';
 
 export function formatCoord(type: BoardType, pos: Vector4i): string {
-  if (type === BoardType.TicTacToe3D || type === BoardType.TicTacToe4x4_3D) {
+  if (type === BoardType.Ultimate) {
+    const macroIdx = pos.w * 3 + pos.z;
+    return `Tablero ${macroIdx + 1} (Fila ${pos.x + 1}, Col ${pos.y + 1})`;
+  } else if (type === BoardType.TicTacToe3D || type === BoardType.TicTacToe4x4_3D) {
     return `Piso ${pos.z + 1} (Fila ${pos.x + 1}, Col ${pos.y + 1})`;
   } else if (type === BoardType.TicTacToe4D) {
     return `Cubo (${pos.w + 1},${pos.z + 1}) [${pos.x + 1},${pos.y + 1}]`;
@@ -17,6 +20,26 @@ export function formatCoord(type: BoardType, pos: Vector4i): string {
 }
 
 function findImmediateThreat(board: BoardModel, symbol: CellSymbol): Vector4i | null {
+  if (board.type === BoardType.Ultimate) {
+    const validMoves = board.getValidMoves();
+    // 1. Victoria global
+    for (const m of validMoves) {
+      board.makeMove(m, symbol);
+      const { winner } = board.checkWinner();
+      board.undoMove(m);
+      if (winner === symbol) return m;
+    }
+    // 2. Victoria local de mini-tablero
+    for (const m of validMoves) {
+      const macroIdx = m.w * 3 + m.z;
+      board.makeMove(m, symbol);
+      const won = board.getMiniBoardWinner(macroIdx) === symbol;
+      board.undoMove(m);
+      if (won) return m;
+    }
+    return null;
+  }
+
   const lines = getWinningLines(board.type);
   for (let l = 0; l < lines.length; ++l) {
     const line = lines[l];

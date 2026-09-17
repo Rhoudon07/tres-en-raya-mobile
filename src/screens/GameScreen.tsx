@@ -12,7 +12,9 @@ import { Board2D } from '../components/board/Board2D';
 import { BoardGravity } from '../components/board/BoardGravity';
 import { Board3D } from '../components/board/Board3D';
 import { Board4D } from '../components/board/Board4D';
+import { BoardUltimate } from '../components/board/BoardUltimate';
 import { ResultModal } from '../components/game/ResultModal';
+import { GameTimer } from '../components/game/GameTimer';
 import { GameButton } from '../components/common/GameButton';
 import { Badge } from '../components/common/Badge';
 
@@ -30,7 +32,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   const gameOver = useGameStore((state) => state.gameOver);
   const resultMessage = useGameStore((state) => state.resultMessage);
   const winningLine = useGameStore((state) => state.winningLine);
+  const selectedPiece = useGameStore((state) => state.selectedPiece);
   const playMove = useGameStore((state) => state.playMove);
+  const handleTimeout = useGameStore((state) => state.handleTimeout);
   const restartCurrentGame = useGameStore((state) => state.restartCurrentGame);
 
   const soundEnabled = useSettingsStore((state) => state.soundEnabled);
@@ -79,11 +83,17 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
       case BoardType.TicTacToe3x3:
       case BoardType.Connect4x4:
       case BoardType.Connect5x5:
+      case BoardType.Limited3x3:
+      case BoardType.Misere3x3:
+      case BoardType.Movement3x3:
+      case BoardType.TimeAttack3x3:
         return (
           <Board2D
             board={board}
             onCellPress={handleCellPress}
             winningLine={winningLine}
+            currentTurn={currentTurn}
+            selectedPiece={selectedPiece}
             disabled={isCpuThinking || gameOver}
           />
         );
@@ -109,6 +119,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
       case BoardType.TicTacToe4D:
         return (
           <Board4D
+            board={board}
+            onCellPress={handleCellPress}
+            winningLine={winningLine}
+            disabled={isCpuThinking || gameOver}
+          />
+        );
+      case BoardType.Ultimate:
+        return (
+          <BoardUltimate
             board={board}
             onCellPress={handleCellPress}
             winningLine={winningLine}
@@ -158,6 +177,30 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
           gameOver={gameOver}
           resultMessage={resultMessage}
         />
+
+        {/* Temporizador de alto rendimiento para Contrarreloj */}
+        {boardType === BoardType.TimeAttack3x3 && (
+          <GameTimer
+            currentTurn={currentTurn}
+            isCpuThinking={isCpuThinking}
+            gameOver={gameOver}
+            onTimeout={handleTimeout}
+            secondsPerTurn={5}
+          />
+        )}
+
+        {/* Guía de Fase para Modo Movimiento */}
+        {boardType === BoardType.Movement3x3 && !gameOver && (
+          <View style={styles.movementPhaseBanner}>
+            <Text style={styles.movementPhaseText}>
+              {!board.isMovementPhase()
+                ? `📍 Fase de Colocación (${board.getPieceCount(currentTurn)}/3 fichas colocadas)`
+                : selectedPiece
+                ? `✨ Ficha seleccionada: Toca una casilla adyacente libre`
+                : `👆 Tu turno: Selecciona una de tus fichas (${currentTurn}) para moverla`}
+            </Text>
+          </View>
+        )}
 
         {/* Tablero de juego activo */}
         <View style={styles.boardContainer}>{renderActiveBoard()}</View>
@@ -294,5 +337,22 @@ const styles = StyleSheet.create({
   bottomBtn: {
     flex: 1,
     marginHorizontal: 4,
+  },
+  movementPhaseBanner: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.2)',
+    alignItems: 'center',
+  },
+  movementPhaseText: {
+    color: Colors.accentCyan,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

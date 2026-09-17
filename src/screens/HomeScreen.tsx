@@ -100,9 +100,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           />
 
           <GameButton
-            title="MODALIDADES"
+            title="DESAFÍOS Y PUZZLES"
             size="medium"
-            onPress={() => navigation.navigate('BoardSelect')}
+            variant="secondary"
+            onPress={() => navigation.navigate('Puzzle')}
           />
 
           <GameButton

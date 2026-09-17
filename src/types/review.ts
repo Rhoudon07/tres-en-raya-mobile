@@ -11,6 +11,7 @@ export enum MoveQuality {
 export interface MoveRecord {
   symbol: CellSymbol;
   pos: Vector4i;
+  from?: Vector4i;
 }
 
 export interface MoveAnalysis {

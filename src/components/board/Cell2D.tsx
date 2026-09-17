@@ -16,6 +16,10 @@ interface Cell2DProps {
   size: number;
   isWinningCell?: boolean;
   isSuggested?: boolean;
+  isExpiring?: boolean;
+  isSelected?: boolean;
+  isDestination?: boolean;
+  isSelectable?: boolean;
   isGhost?: boolean;
   onPress: () => void;
   disabled?: boolean;
@@ -29,6 +33,10 @@ export const Cell2D: React.FC<Cell2DProps> = ({
   size,
   isWinningCell = false,
   isSuggested = false,
+  isExpiring = false,
+  isSelected = false,
+  isDestination = false,
+  isSelectable = false,
   isGhost = false,
   onPress,
   disabled = false,
@@ -53,18 +61,24 @@ export const Cell2D: React.FC<Cell2DProps> = ({
   }));
 
   const getAccessibilityLabel = () => {
+    if (symbol === '#') {
+      return `Casilla bloqueada por obstáculo`;
+    }
     if (symbol === ' ') {
       return `Casilla fila ${row + 1}, columna ${col + 1}, vacía`;
     }
-    return `Casilla fila ${row + 1}, columna ${col + 1}, ocupada por ${symbol}`;
+    return `Casilla fila ${row + 1}, columna ${col + 1}, ocupada por ${symbol}${
+      isExpiring ? ', próxima a desaparecer' : ''
+    }${isSelected ? ', seleccionada para mover' : ''}`;
   };
 
-  const tokenColor = symbol === 'X' ? Colors.playerX : Colors.playerO;
+  const tokenColor = symbol === 'X' ? Colors.playerX : symbol === 'O' ? Colors.playerO : '#94a3b8';
+  const canPress = !disabled && symbol !== '#' && (symbol === ' ' || isSelectable || isSelected);
 
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled || symbol !== ' '}
+      disabled={!canPress}
       accessibilityRole="button"
       accessibilityLabel={getAccessibilityLabel()}
       style={({ pressed }) => [
@@ -72,16 +86,41 @@ export const Cell2D: React.FC<Cell2DProps> = ({
         {
           width: size,
           height: size,
-          backgroundColor: pressed && symbol === ' ' ? Colors.cellHover : Colors.cellNormal,
-          borderColor: isWinningCell
+          backgroundColor: symbol === '#'
+            ? '#1e293b'
+            : isSelected
+            ? 'rgba(245, 158, 11, 0.15)'
+            : isDestination
+            ? 'rgba(6, 182, 212, 0.12)'
+            : pressed && symbol === ' '
+            ? Colors.cellHover
+            : Colors.cellNormal,
+          borderColor: symbol === '#'
+            ? '#475569'
+            : isWinningCell
             ? Colors.winLine
             : isSuggested
             ? Colors.reviewBest
+            : isSelected
+            ? '#f59e0b'
+            : isDestination
+            ? Colors.accentCyan
+            : isExpiring
+            ? '#f59e0b'
             : Colors.cellBorder,
-          borderWidth: isWinningCell || isSuggested ? 2.5 : 1.5,
+          borderWidth:
+            isWinningCell || isSuggested || isSelected
+              ? 2.5
+              : isDestination || isExpiring
+              ? 2
+              : 1.5,
+          borderStyle: isExpiring ? 'dashed' : 'solid',
         },
         isWinningCell && styles.winningCell,
         isSuggested && styles.suggestedCell,
+        isExpiring && styles.expiringCell,
+        isSelected && styles.selectedCell,
+        isDestination && styles.destinationCell,
         style,
       ]}
     >
@@ -92,17 +131,38 @@ export const Cell2D: React.FC<Cell2DProps> = ({
               styles.tokenText,
               {
                 color: tokenColor,
-                fontSize: size * 0.58,
+                fontSize: symbol === '#' ? size * 0.45 : size * 0.58,
+                opacity: isExpiring ? 0.75 : symbol === '#' ? 0.85 : 1,
               },
             ]}
           >
-            {symbol}
+            {symbol === '#' ? '🪨' : symbol}
           </Text>
         </Animated.View>
       )}
 
+      {/* Distintivo de ficha próxima a desaparecer */}
+      {isExpiring && symbol !== ' ' && (
+        <Text style={styles.expiringBadge}>⏳</Text>
+      )}
+
+      {/* Indicador de destino válido en fase de movimiento */}
+      {isDestination && symbol === ' ' && (
+        <Text
+          style={[
+            styles.destinationDot,
+            {
+              color: Colors.accentCyan,
+              fontSize: size * 0.35,
+            },
+          ]}
+        >
+          ●
+        </Text>
+      )}
+
       {/* Previsualización fantasma en gravedad */}
-      {isGhost && symbol === ' ' && (
+      {isGhost && symbol === ' ' && !isDestination && (
         <Text
           style={[
             styles.tokenText,
@@ -150,5 +210,36 @@ const styles = StyleSheet.create({
   tokenText: {
     fontWeight: '900',
     textAlign: 'center',
+  },
+  expiringCell: {
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  expiringBadge: {
+    position: 'absolute',
+    top: 3,
+    right: 4,
+    fontSize: 11,
+  },
+  selectedCell: {
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  destinationCell: {
+    shadowColor: Colors.accentCyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  destinationDot: {
+    textAlign: 'center',
+    fontWeight: '900',
   },
 });

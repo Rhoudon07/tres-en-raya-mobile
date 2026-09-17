@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { BoardModel } from '../../game/board/BoardModel';
-import { Vector4i, areVectorsEqual } from '../../types/board';
+import { Vector4i, areVectorsEqual, CellSymbol } from '../../types/board';
 import { Colors } from '../../constants/colors';
 import { Cell2D } from './Cell2D';
 
@@ -10,6 +10,8 @@ interface Board2DProps {
   onCellPress: (pos: Vector4i) => void;
   winningLine?: Vector4i[] | null;
   suggestedCell?: Vector4i | null;
+  currentTurn?: CellSymbol;
+  selectedPiece?: Vector4i | null;
   disabled?: boolean;
 }
 
@@ -18,6 +20,8 @@ export const Board2D: React.FC<Board2DProps> = ({
   onCellPress,
   winningLine,
   suggestedCell,
+  currentTurn,
+  selectedPiece,
   disabled = false,
 }) => {
   const { width } = useWindowDimensions();
@@ -38,6 +42,30 @@ export const Board2D: React.FC<Board2DProps> = ({
     return areVectorsEqual({ x: r, y: c, z: 0, w: 0 }, suggestedCell);
   };
 
+  const expiringCell =
+    board.isLimited() && currentTurn ? board.getExpiringPiece(currentTurn) : null;
+
+  const isCellExpiring = (r: number, c: number): boolean => {
+    if (!expiringCell) return false;
+    return areVectorsEqual({ x: r, y: c, z: 0, w: 0 }, expiringCell);
+  };
+
+  const isCellSelected = (r: number, c: number): boolean => {
+    if (!selectedPiece) return false;
+    return areVectorsEqual({ x: r, y: c, z: 0, w: 0 }, selectedPiece);
+  };
+
+  const isCellDestination = (r: number, c: number): boolean => {
+    if (!selectedPiece || !board.isMovement() || !board.isMovementPhase()) return false;
+    const pos = { x: r, y: c, z: 0, w: 0 };
+    return board.isCellEmpty(pos) && board.isAdjacent(selectedPiece, pos);
+  };
+
+  const isCellSelectable = (r: number, c: number): boolean => {
+    if (!board.isMovement() || !board.isMovementPhase() || !currentTurn) return false;
+    return board.getCell({ x: r, y: c, z: 0, w: 0 }) === currentTurn;
+  };
+
   return (
     <View style={[styles.container, { width: maxBoardWidth }]}>
       {Array.from({ length: gridSize }).map((_, r) => (
@@ -53,6 +81,10 @@ export const Board2D: React.FC<Board2DProps> = ({
                 symbol={symbol}
                 isWinningCell={isWinningCell(r, c)}
                 isSuggested={isSuggested(r, c)}
+                isExpiring={isCellExpiring(r, c)}
+                isSelected={isCellSelected(r, c)}
+                isDestination={isCellDestination(r, c)}
+                isSelectable={isCellSelectable(r, c)}
                 disabled={disabled}
                 onPress={() => onCellPress({ x: r, y: c, z: 0, w: 0 })}
               />

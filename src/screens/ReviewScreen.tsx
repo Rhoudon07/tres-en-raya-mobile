@@ -9,6 +9,7 @@ import { Board2D } from '../components/board/Board2D';
 import { BoardGravity } from '../components/board/BoardGravity';
 import { Board3D } from '../components/board/Board3D';
 import { Board4D } from '../components/board/Board4D';
+import { BoardUltimate } from '../components/board/BoardUltimate';
 import { ReviewCard } from '../components/review/ReviewCard';
 import { ReviewControls } from '../components/review/ReviewControls';
 import { AccuracyBar } from '../components/common/AccuracyBar';
@@ -50,7 +51,11 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
     for (let i = 0; i < safeStep; ++i) {
       const move = moveHistory[i];
       if (move && move.pos && move.symbol) {
-        b.makeMove(move.pos, move.symbol);
+        if (move.from && b.isMovement()) {
+          b.movePiece(move.from, move.pos, move.symbol);
+        } else {
+          b.makeMove(move.pos, move.symbol);
+        }
       }
     }
     return b;
@@ -89,6 +94,10 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
       case BoardType.TicTacToe3x3:
       case BoardType.Connect4x4:
       case BoardType.Connect5x5:
+      case BoardType.Limited3x3:
+      case BoardType.Misere3x3:
+      case BoardType.Movement3x3:
+      case BoardType.TimeAttack3x3:
         return (
           <Board2D
             board={simBoard}
@@ -122,6 +131,16 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
       case BoardType.TicTacToe4D:
         return (
           <Board4D
+            board={simBoard}
+            onCellPress={() => {}}
+            winningLine={winningLine}
+            suggestedCell={suggestedCell}
+            disabled={true}
+          />
+        );
+      case BoardType.Ultimate:
+        return (
+          <BoardUltimate
             board={simBoard}
             onCellPress={() => {}}
             winningLine={winningLine}

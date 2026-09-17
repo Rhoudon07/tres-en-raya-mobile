@@ -41,6 +41,12 @@ const DEFAULT_STATS: OverallStats = {
     [BoardType.TicTacToe3D]: createEmptyModeStats(),
     [BoardType.TicTacToe4x4_3D]: createEmptyModeStats(),
     [BoardType.TicTacToe4D]: createEmptyModeStats(),
+    [BoardType.Ultimate]: createEmptyModeStats(),
+    [BoardType.Limited3x3]: createEmptyModeStats(),
+    [BoardType.Misere3x3]: createEmptyModeStats(),
+    [BoardType.Movement3x3]: createEmptyModeStats(),
+    [BoardType.TimeAttack3x3]: createEmptyModeStats(),
+    [BoardType.Obstacles4x4]: createEmptyModeStats(),
   },
 };
 

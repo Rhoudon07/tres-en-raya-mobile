@@ -10,6 +10,7 @@ import { ReviewScreen } from '../screens/ReviewScreen';
 import { StatisticsScreen } from '../screens/StatisticsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AboutScreen } from '../screens/AboutScreen';
+import { PuzzleScreen } from '../screens/PuzzleScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   Statistics: undefined;
   Settings: undefined;
   About: undefined;
+  Puzzle: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -44,6 +46,7 @@ export const AppNavigator: React.FC = () => {
       <Stack.Screen name="Statistics" component={StatisticsScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="Puzzle" component={PuzzleScreen} />
     </Stack.Navigator>
   );
 };
