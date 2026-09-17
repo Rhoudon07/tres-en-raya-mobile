@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { BoardModel } from '../../game/board/BoardModel';
-import { Vector4i, areVectorsEqual } from '../../types/board';
+import { BoardType, Vector4i, areVectorsEqual } from '../../types/board';
 import { Colors } from '../../constants/colors';
 import { Cell2D } from './Cell2D';
 
@@ -24,12 +24,17 @@ export const Board3D: React.FC<Board3DProps> = ({
   const [selectedZ, setSelectedZ] = useState<number>(0);
   const [lastSelectedCoord, setLastSelectedCoord] = useState<Vector4i | null>(null);
 
-  const gridSize = 3;
+  const gridSize = board.gridSize;
+  const layersCount = board.type === BoardType.TicTacToe4x4_3D ? 4 : 3;
   const maxBoardWidth = Math.min(width - 32, 380);
-  const paddingTotal = (gridSize + 1) * 10;
+  const gap = gridSize === 4 ? 8 : 10;
+  const paddingTotal = (gridSize + 1) * gap;
   const cellSize = Math.floor((maxBoardWidth - paddingTotal) / gridSize);
 
-  const floorLabels = ['PISO 1 (SUPERIOR)', 'PISO 2 (MEDIO)', 'PISO 3 (INFERIOR)'];
+  const floorLabels =
+    layersCount === 4
+      ? ['PISO 1', 'PISO 2', 'PISO 3', 'PISO 4']
+      : ['PISO 1 (SUPERIOR)', 'PISO 2 (MEDIO)', 'PISO 3 (INFERIOR)'];
 
   const hasWinOnFloor = (z: number): boolean => {
     if (!winningLine) return false;
@@ -163,10 +168,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.reviewBest,
   },
   floorTabText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: Colors.textSecondary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   floorTabTextSelected: {
     color: Colors.accentCyan,

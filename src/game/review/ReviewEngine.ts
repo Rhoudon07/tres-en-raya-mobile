@@ -1,18 +1,53 @@
 import { BoardModel } from '../board/BoardModel';
-import { BoardType, Vector4i, areVectorsEqual } from '../../types/board';
+import { BoardType, CellSymbol, Vector4i, areVectorsEqual } from '../../types/board';
+import { getWinningLines } from '../board/WinningLines';
 import { Difficulty } from '../../types/ai';
 import { GameReviewReport, MoveAnalysis, MoveQuality, MoveRecord } from '../../types/review';
 import { AIEngine } from '../ai/AIEngine';
 import { Colors } from '../../constants/colors';
 
 export function formatCoord(type: BoardType, pos: Vector4i): string {
-  if (type === BoardType.TicTacToe3D) {
+  if (type === BoardType.TicTacToe3D || type === BoardType.TicTacToe4x4_3D) {
     return `Piso ${pos.z + 1} (Fila ${pos.x + 1}, Col ${pos.y + 1})`;
   } else if (type === BoardType.TicTacToe4D) {
     return `Cubo (${pos.w + 1},${pos.z + 1}) [${pos.x + 1},${pos.y + 1}]`;
   } else {
     return `Fila ${pos.x + 1}, Col ${pos.y + 1}`;
   }
+}
+
+function findImmediateThreat(board: BoardModel, symbol: CellSymbol): Vector4i | null {
+  const lines = getWinningLines(board.type);
+  for (let l = 0; l < lines.length; ++l) {
+    const line = lines[l];
+    let countSym = 0;
+    let emptyPos: Vector4i | null = null;
+    let blocked = false;
+
+    for (let i = 0; i < line.length; ++i) {
+      const c = board.getCell(line[i]);
+      if (c === symbol) {
+        countSym++;
+      } else if (c === ' ') {
+        if (emptyPos === null) {
+          emptyPos = line[i];
+        } else {
+          // Más de un espacio libre, no es amenaza inmediata en esta jugada
+          blocked = true;
+          break;
+        }
+      } else {
+        // Celda ocupada por el adversario
+        blocked = true;
+        break;
+      }
+    }
+
+    if (!blocked && countSym === line.length - 1 && emptyPos !== null) {
+      return emptyPos;
+    }
+  }
+  return null;
 }
 
 export class ReviewEngine {
@@ -41,12 +76,9 @@ export class ReviewEngine {
       const oppSym = curSym === 'X' ? 'O' : 'X';
       const actualPos = rec.pos;
 
-      // 1. Obtener mejor movimiento según el motor en Hard
-      const bestPos = AIEngine.getBestMoveSync(simBoard, curSym, oppSym, Difficulty.Hard);
-
       let ma: MoveAnalysis;
 
-      // 2. Verificar si la jugada realizada fue victoria inmediata
+      // 1. ¿La jugada realizada fue una victoria inmediata?
       simBoard.makeMove(actualPos, curSym);
       const { winner: actualWinner } = simBoard.checkWinner();
       simBoard.undoMove(actualPos);
@@ -63,53 +95,22 @@ export class ReviewEngine {
           accuracy: 100,
         };
       } else {
-        // 3. Verificar si omitió victoria inmediata que sí lograba bestPos
-        simBoard.makeMove(bestPos, curSym);
-        const { winner: bestWinner } = simBoard.checkWinner();
-        simBoard.undoMove(bestPos);
-        const bestWon = bestWinner === curSym;
+        // 2. ¿El jugador omitió una victoria inmediata servida?
+        const myWinThreat = findImmediateThreat(simBoard, curSym);
 
-        if (bestWon) {
+        if (myWinThreat) {
           ma = {
             quality: MoveQuality.Blunder,
             badgeText: 'PIFIA GRAVE',
             badgeColor: Colors.reviewBlunder,
-            commentary: `Pifia: Se omitió una victoria inmediata en ${formatCoord(type, bestPos)}.`,
+            commentary: `Pifia: Se omitió una victoria inmediata en ${formatCoord(type, myWinThreat)}.`,
             tip: '✦ Sugerencia ganadora resaltada en verde esmeralda en el tablero.',
-            suggestedMove: bestPos,
+            suggestedMove: myWinThreat,
             accuracy: 0,
           };
         } else {
-          // 4. Verificar si el rival tenía una amenaza de victoria inmediata
-          let oppThreat: Vector4i | null = null;
-          const lines = simBoard.is4D()
-            ? 3
-            : simBoard.is3D()
-            ? 3
-            : simBoard.gridSize;
-
-          const maxW = simBoard.is4D() ? 3 : 1;
-          const maxZ = simBoard.is3D() || simBoard.is4D() ? 3 : 1;
-
-          outerLoop: for (let w = 0; w < maxW; ++w) {
-            for (let z = 0; z < maxZ; ++z) {
-              for (let x = 0; x < simBoard.gridSize; ++x) {
-                for (let y = 0; y < simBoard.gridSize; ++y) {
-                  const checkPos: Vector4i = { x, y, z, w };
-                  if (simBoard.isCellEmpty(checkPos)) {
-                    simBoard.makeMove(checkPos, oppSym);
-                    const { winner: oppWin } = simBoard.checkWinner();
-                    simBoard.undoMove(checkPos);
-
-                    if (oppWin === oppSym) {
-                      oppThreat = checkPos;
-                      break outerLoop;
-                    }
-                  }
-                }
-              }
-            }
-          }
+          // 3. ¿El rival tenía una amenaza de victoria inmediata?
+          const oppThreat = findImmediateThreat(simBoard, oppSym);
 
           if (oppThreat) {
             if (areVectorsEqual(actualPos, oppThreat)) {
@@ -133,62 +134,47 @@ export class ReviewEngine {
                 accuracy: 0,
               };
             }
-          } else if (areVectorsEqual(actualPos, bestPos)) {
-            ma = {
-              quality: MoveQuality.Best,
-              badgeText: 'MEJOR JUGADA',
-              badgeColor: Colors.reviewBest,
-              commentary: 'Movimiento óptimo encontrado por el motor Minimax.',
-              tip: '✦ Mantiene el máximo control estratégico de la posición.',
-              suggestedMove: { x: -1, y: -1, z: -1, w: -1 },
-              accuracy: 100,
-            };
           } else {
-            // 5. Verificar si jugar actualPos concede victoria inmediata al rival
-            simBoard.makeMove(actualPos, curSym);
-            let createsLoss = false;
+            // 4. No hay victoria ni amenaza inmediata: evaluar posición óptima con el motor
+            const bestPos = AIEngine.getBestMoveSync(simBoard, curSym, oppSym, Difficulty.Hard);
 
-            lossCheck: for (let w = 0; w < maxW; ++w) {
-              for (let z = 0; z < maxZ; ++z) {
-                for (let x = 0; x < simBoard.gridSize; ++x) {
-                  for (let y = 0; y < simBoard.gridSize; ++y) {
-                    const testPos: Vector4i = { x, y, z, w };
-                    if (simBoard.isCellEmpty(testPos)) {
-                      simBoard.makeMove(testPos, oppSym);
-                      const { winner: testWin } = simBoard.checkWinner();
-                      simBoard.undoMove(testPos);
-
-                      if (testWin === oppSym) {
-                        createsLoss = true;
-                        break lossCheck;
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            simBoard.undoMove(actualPos);
-
-            if (createsLoss) {
+            if (areVectorsEqual(actualPos, bestPos)) {
               ma = {
-                quality: MoveQuality.Mistake,
-                badgeText: 'ERROR TÁCTICO',
-                badgeColor: Colors.reviewMistake,
-                commentary: 'Error: Esta casilla permite al rival responder con victoria.',
-                tip: `✦ Era mejor jugar en ${formatCoord(type, bestPos)} (sugerida en verde).`,
-                suggestedMove: bestPos,
-                accuracy: 25,
+                quality: MoveQuality.Best,
+                badgeText: 'MEJOR JUGADA',
+                badgeColor: Colors.reviewBest,
+                commentary: 'Movimiento óptimo encontrado por el motor Minimax.',
+                tip: '✦ Mantiene el máximo control estratégico de la posición.',
+                suggestedMove: { x: -1, y: -1, z: -1, w: -1 },
+                accuracy: 100,
               };
             } else {
-              ma = {
-                quality: MoveQuality.Good,
-                badgeText: 'BUENA JUGADA',
-                badgeColor: Colors.reviewGood,
-                commentary: 'Buena jugada: Mantiene la posición equilibrada y segura.',
-                tip: `✦ El motor sugería ${formatCoord(type, bestPos)} para mayor iniciativa.`,
-                suggestedMove: bestPos,
-                accuracy: 80,
-              };
+              // 5. Verificar si la jugada actual concede victoria inmediata al rival
+              simBoard.makeMove(actualPos, curSym);
+              const concededWin = findImmediateThreat(simBoard, oppSym);
+              simBoard.undoMove(actualPos);
+
+              if (concededWin) {
+                ma = {
+                  quality: MoveQuality.Mistake,
+                  badgeText: 'ERROR TÁCTICO',
+                  badgeColor: Colors.reviewMistake,
+                  commentary: 'Error: Esta casilla permite al rival responder con victoria.',
+                  tip: `✦ Era mejor jugar en ${formatCoord(type, bestPos)} (sugerida en verde).`,
+                  suggestedMove: bestPos,
+                  accuracy: 25,
+                };
+              } else {
+                ma = {
+                  quality: MoveQuality.Good,
+                  badgeText: 'BUENA JUGADA',
+                  badgeColor: Colors.reviewGood,
+                  commentary: 'Buena jugada: Mantiene la posición equilibrada y segura.',
+                  tip: `✦ El motor sugería ${formatCoord(type, bestPos)} para mayor iniciativa.`,
+                  suggestedMove: bestPos,
+                  accuracy: 80,
+                };
+              }
             }
           }
         }

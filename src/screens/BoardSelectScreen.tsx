@@ -45,6 +45,16 @@ const BOARDS: BoardOption[] = [
     accentColor: Colors.playerO,
   },
   {
+    type: BoardType.TicTacToe4x4_3D,
+    title: '4x4x4 3D (QUBIC 4x4)',
+    category: 'TRIDIMENSIONAL EXTENDIDO',
+    dimensions: '4 × 4 × 4',
+    cells: 64,
+    lines: '76 líneas ganadoras',
+    description: 'Cubo de 4 pisos y 64 casillas. Cuatro en raya en cualquier dirección espacial: filas, columnas, pilares verticales, diagonales en planos y 4 diagonales espaciales.',
+    accentColor: '#f59e0b',
+  },
+  {
     type: BoardType.TicTacToe4D,
     title: '3x3x3x3 TESERACTO (4D)',
     category: 'HIPERDIMENSIONAL',
@@ -63,6 +73,16 @@ const BOARDS: BoardOption[] = [
     lines: '10 líneas ganadoras',
     description: 'Colocación libre sin gravedad. Cuatro fichas consecutivas necesarias para ganar y fuerte control territorial del centro.',
     accentColor: Colors.accentGreen,
+  },
+  {
+    type: BoardType.Connect5x5,
+    title: '5x5 LIBRE (CINCO EN RAYA)',
+    category: 'TABLERO EXTENDIDO',
+    dimensions: '5 × 5',
+    cells: 25,
+    lines: '12 líneas ganadoras',
+    description: 'Cinco en Raya en cuadrícula expandida de 25 casillas. Cinco fichas consecutivas necesarias para la victoria con alto valor táctico en el centro.',
+    accentColor: '#ec4899',
   },
   {
     type: BoardType.Gravity4x4,

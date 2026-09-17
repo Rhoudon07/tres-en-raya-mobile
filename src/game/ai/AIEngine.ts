@@ -6,6 +6,8 @@ import { getBestMove4x4 } from './Minimax4x4';
 import { getBestMoveGravity4x4 } from './MinimaxGravity';
 import { getBestMove3D } from './Minimax3D';
 import { getBestMove4D } from './Minimax4D';
+import { getBestMove4x4_3D } from './Minimax4x4_3D';
+import { getBestMove5x5 } from './Minimax5x5';
 
 export class AIEngine {
   /**
@@ -22,12 +24,16 @@ export class AIEngine {
         return getBestMove3x3(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.Connect4x4:
         return getBestMove4x4(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.Connect5x5:
+        return getBestMove5x5(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.Gravity4x4:
         return getBestMoveGravity4x4(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.TicTacToe3D:
         return getBestMove3D(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.TicTacToe4D:
         return getBestMove4D(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.TicTacToe4x4_3D:
+        return getBestMove4x4_3D(board, aiSymbol, humanSymbol, difficulty);
       default:
         return { x: 0, y: 0, z: 0, w: 0 };
     }

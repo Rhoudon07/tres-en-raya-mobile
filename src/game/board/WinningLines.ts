@@ -83,6 +83,51 @@ function generateWinningLines4x4(): Vector4i[][] {
   return lines;
 }
 
+// 2.1 Líneas 5x5 Libre (12 líneas)
+function generateWinningLines5x5(): Vector4i[][] {
+  const lines: Vector4i[][] = [];
+
+  // 5 Filas
+  for (let r = 0; r < 5; ++r) {
+    lines.push([
+      { x: r, y: 0, z: 0, w: 0 },
+      { x: r, y: 1, z: 0, w: 0 },
+      { x: r, y: 2, z: 0, w: 0 },
+      { x: r, y: 3, z: 0, w: 0 },
+      { x: r, y: 4, z: 0, w: 0 },
+    ]);
+  }
+
+  // 5 Columnas
+  for (let c = 0; c < 5; ++c) {
+    lines.push([
+      { x: 0, y: c, z: 0, w: 0 },
+      { x: 1, y: c, z: 0, w: 0 },
+      { x: 2, y: c, z: 0, w: 0 },
+      { x: 3, y: c, z: 0, w: 0 },
+      { x: 4, y: c, z: 0, w: 0 },
+    ]);
+  }
+
+  // 2 Diagonales
+  lines.push([
+    { x: 0, y: 0, z: 0, w: 0 },
+    { x: 1, y: 1, z: 0, w: 0 },
+    { x: 2, y: 2, z: 0, w: 0 },
+    { x: 3, y: 3, z: 0, w: 0 },
+    { x: 4, y: 4, z: 0, w: 0 },
+  ]);
+  lines.push([
+    { x: 0, y: 4, z: 0, w: 0 },
+    { x: 1, y: 3, z: 0, w: 0 },
+    { x: 2, y: 2, z: 0, w: 0 },
+    { x: 3, y: 1, z: 0, w: 0 },
+    { x: 4, y: 0, z: 0, w: 0 },
+  ]);
+
+  return lines;
+}
+
 // 3. Líneas 3x3 en 3D / Qubic (Exactamente 49 líneas)
 function generateWinningLines3D(): Vector4i[][] {
   const lines: Vector4i[][] = [];
@@ -234,11 +279,134 @@ function generateWinningLines4D(): Vector4i[][] {
   return lines;
 }
 
+// 5. Líneas 4x4 en 3D / Qubic 4x4x4 (Exactamente 76 líneas)
+function generateWinningLines4x4_3D(): Vector4i[][] {
+  const lines: Vector4i[][] = [];
+
+  // 1. Filas por capa Z (16)
+  for (let z = 0; z < 4; ++z) {
+    for (let r = 0; r < 4; ++r) {
+      lines.push([
+        { x: r, y: 0, z, w: 0 },
+        { x: r, y: 1, z, w: 0 },
+        { x: r, y: 2, z, w: 0 },
+        { x: r, y: 3, z, w: 0 },
+      ]);
+    }
+  }
+
+  // 2. Columnas por capa Z (16)
+  for (let z = 0; z < 4; ++z) {
+    for (let c = 0; c < 4; ++c) {
+      lines.push([
+        { x: 0, y: c, z, w: 0 },
+        { x: 1, y: c, z, w: 0 },
+        { x: 2, y: c, z, w: 0 },
+        { x: 3, y: c, z, w: 0 },
+      ]);
+    }
+  }
+
+  // 3. Pilares verticales entre capas Z (16)
+  for (let r = 0; r < 4; ++r) {
+    for (let c = 0; c < 4; ++c) {
+      lines.push([
+        { x: r, y: c, z: 0, w: 0 },
+        { x: r, y: c, z: 1, w: 0 },
+        { x: r, y: c, z: 2, w: 0 },
+        { x: r, y: c, z: 3, w: 0 },
+      ]);
+    }
+  }
+
+  // 4. Diagonales en planos XY por piso Z (8)
+  for (let z = 0; z < 4; ++z) {
+    lines.push([
+      { x: 0, y: 0, z, w: 0 },
+      { x: 1, y: 1, z, w: 0 },
+      { x: 2, y: 2, z, w: 0 },
+      { x: 3, y: 3, z, w: 0 },
+    ]);
+    lines.push([
+      { x: 0, y: 3, z, w: 0 },
+      { x: 1, y: 2, z, w: 0 },
+      { x: 2, y: 1, z, w: 0 },
+      { x: 3, y: 0, z, w: 0 },
+    ]);
+  }
+
+  // 5. Diagonales en planos XZ (8)
+  for (let c = 0; c < 4; ++c) {
+    lines.push([
+      { x: 0, y: c, z: 0, w: 0 },
+      { x: 1, y: c, z: 1, w: 0 },
+      { x: 2, y: c, z: 2, w: 0 },
+      { x: 3, y: c, z: 3, w: 0 },
+    ]);
+    lines.push([
+      { x: 3, y: c, z: 0, w: 0 },
+      { x: 2, y: c, z: 1, w: 0 },
+      { x: 1, y: c, z: 2, w: 0 },
+      { x: 0, y: c, z: 3, w: 0 },
+    ]);
+  }
+
+  // 6. Diagonales en planos YZ (8)
+  for (let r = 0; r < 4; ++r) {
+    lines.push([
+      { x: r, y: 0, z: 0, w: 0 },
+      { x: r, y: 1, z: 1, w: 0 },
+      { x: r, y: 2, z: 2, w: 0 },
+      { x: r, y: 3, z: 3, w: 0 },
+    ]);
+    lines.push([
+      { x: r, y: 3, z: 0, w: 0 },
+      { x: r, y: 2, z: 1, w: 0 },
+      { x: r, y: 1, z: 2, w: 0 },
+      { x: r, y: 0, z: 3, w: 0 },
+    ]);
+  }
+
+  // 7. Diagonales espaciales 3D que cruzan el cubo (4)
+  lines.push([
+    { x: 0, y: 0, z: 0, w: 0 },
+    { x: 1, y: 1, z: 1, w: 0 },
+    { x: 2, y: 2, z: 2, w: 0 },
+    { x: 3, y: 3, z: 3, w: 0 },
+  ]);
+  lines.push([
+    { x: 0, y: 3, z: 0, w: 0 },
+    { x: 1, y: 2, z: 1, w: 0 },
+    { x: 2, y: 1, z: 2, w: 0 },
+    { x: 3, y: 0, z: 3, w: 0 },
+  ]);
+  lines.push([
+    { x: 3, y: 0, z: 0, w: 0 },
+    { x: 2, y: 1, z: 1, w: 0 },
+    { x: 1, y: 2, z: 2, w: 0 },
+    { x: 0, y: 3, z: 3, w: 0 },
+  ]);
+  lines.push([
+    { x: 3, y: 3, z: 0, w: 0 },
+    { x: 2, y: 2, z: 1, w: 0 },
+    { x: 1, y: 1, z: 2, w: 0 },
+    { x: 0, y: 0, z: 3, w: 0 },
+  ]);
+
+  return lines;
+}
+
+export const coordToIndex = (p: Vector4i): number => p.x + p.y * 5 + p.z * 25 + p.w * 100;
+
 // Caches estáticos inicializados perezosamente
 let cached3x3: Vector4i[][] | null = null;
 let cached4x4: Vector4i[][] | null = null;
 let cached3D: Vector4i[][] | null = null;
 let cached4D: Vector4i[][] | null = null;
+let cached4x4_3D: Vector4i[][] | null = null;
+let cached5x5: Vector4i[][] | null = null;
+
+const cachedIndices: Partial<Record<BoardType, number[][]>> = {};
 
 export function getWinningLines(type: BoardType): Vector4i[][] {
   switch (type) {
@@ -249,13 +417,27 @@ export function getWinningLines(type: BoardType): Vector4i[][] {
     case BoardType.Gravity4x4:
       if (!cached4x4) cached4x4 = generateWinningLines4x4();
       return cached4x4;
+    case BoardType.Connect5x5:
+      if (!cached5x5) cached5x5 = generateWinningLines5x5();
+      return cached5x5;
     case BoardType.TicTacToe3D:
       if (!cached3D) cached3D = generateWinningLines3D();
       return cached3D;
     case BoardType.TicTacToe4D:
       if (!cached4D) cached4D = generateWinningLines4D();
       return cached4D;
+    case BoardType.TicTacToe4x4_3D:
+      if (!cached4x4_3D) cached4x4_3D = generateWinningLines4x4_3D();
+      return cached4x4_3D;
   }
+}
+
+export function getWinningLineIndices(type: BoardType): number[][] {
+  if (!cachedIndices[type]) {
+    const lines = getWinningLines(type);
+    cachedIndices[type] = lines.map((line) => line.map(coordToIndex));
+  }
+  return cachedIndices[type]!;
 }
 
 /**

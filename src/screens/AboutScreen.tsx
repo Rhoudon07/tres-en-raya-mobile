@@ -79,6 +79,16 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ navigation }) => {
 
         <GameCard style={styles.card}>
           <View style={styles.modeRow}>
+            <Text style={styles.modeName}>5x5 LIBRE (CINCO EN RAYA)</Text>
+            <Badge label="12 Líneas" color="#ec4899" />
+          </View>
+          <Text style={styles.modeDesc}>
+            25 casillas en tablero expandido. Cinco fichas consecutivas necesarias para ganar (filas, columnas o diagonales completas). IA Minimax con evaluación posicional concéntrica y poda alfa-beta.
+          </Text>
+        </GameCard>
+
+        <GameCard style={styles.card}>
+          <View style={styles.modeRow}>
             <Text style={styles.modeName}>4x4 GRAVEDAD (CONECTA 4)</Text>
             <Badge label="10 Líneas" color={Colors.winLine} />
           </View>

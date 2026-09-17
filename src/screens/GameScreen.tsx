@@ -78,6 +78,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
     switch (boardType) {
       case BoardType.TicTacToe3x3:
       case BoardType.Connect4x4:
+      case BoardType.Connect5x5:
         return (
           <Board2D
             board={board}
@@ -96,6 +97,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
           />
         );
       case BoardType.TicTacToe3D:
+      case BoardType.TicTacToe4x4_3D:
         return (
           <Board3D
             board={board}
@@ -163,29 +165,49 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
         {/* Botones inferiores de acción */}
         <View style={styles.bottomControls}>
           {gameOver && !resultModalVisible ? (
-            <GameButton
-              title="VER RESULTADO"
-              variant="accent"
-              size="small"
-              onPress={() => setResultModalVisible(true)}
-              style={styles.bottomBtn}
-            />
+            <>
+              <GameButton
+                title="VOLVER A JUGAR"
+                variant="accent"
+                size="medium"
+                onPress={restartCurrentGame}
+                style={styles.fullWidthBtn}
+              />
+              <View style={styles.secondaryRow}>
+                <GameButton
+                  title="VER RESULTADO"
+                  variant="secondary"
+                  size="small"
+                  onPress={() => setResultModalVisible(true)}
+                  style={styles.bottomBtn}
+                />
+                <GameButton
+                  title="CAMBIAR MODO"
+                  variant="outline"
+                  size="small"
+                  onPress={() => navigation.navigate('BoardSelect')}
+                  style={styles.bottomBtn}
+                />
+              </View>
+            </>
           ) : (
-            <GameButton
-              title="REINICIAR TABLERO"
-              variant="secondary"
-              size="small"
-              onPress={restartCurrentGame}
-              style={styles.bottomBtn}
-            />
+            <View style={styles.secondaryRow}>
+              <GameButton
+                title="REINICIAR TABLERO"
+                variant="secondary"
+                size="small"
+                onPress={restartCurrentGame}
+                style={styles.bottomBtn}
+              />
+              <GameButton
+                title="CAMBIAR MODO"
+                variant="outline"
+                size="small"
+                onPress={() => navigation.navigate('BoardSelect')}
+                style={styles.bottomBtn}
+              />
+            </View>
           )}
-          <GameButton
-            title="CAMBIAR MODO"
-            variant="outline"
-            size="small"
-            onPress={() => navigation.navigate('BoardSelect')}
-            style={styles.bottomBtn}
-          />
         </View>
       </ScrollView>
 
@@ -255,11 +277,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bottomControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     marginTop: 10,
     maxWidth: 380,
     alignSelf: 'center',
+    width: '100%',
+  },
+  fullWidthBtn: {
+    width: '100%',
+    marginVertical: 4,
+  },
+  secondaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     width: '100%',
   },
   bottomBtn: {

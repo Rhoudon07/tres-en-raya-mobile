@@ -80,4 +80,61 @@ describe('BoardModel logic tests', () => {
     expect(res.winner).toBe('X');
     expect(res.winningLine?.length).toBe(3);
   });
+
+  test('4x4 3D: Victoria en diagonal espacial 3D completa (4 casillas)', () => {
+    const b = new BoardModel(BoardType.TicTacToe4x4_3D);
+    expect(b.gridSize).toBe(4);
+    expect(b.winCondition).toBe(4);
+
+    b.makeMove({ x: 0, y: 0, z: 0, w: 0 }, 'X');
+    b.makeMove({ x: 1, y: 1, z: 1, w: 0 }, 'X');
+    b.makeMove({ x: 2, y: 2, z: 2, w: 0 }, 'X');
+    expect(b.checkWinner().winner).toBe(' ');
+
+    b.makeMove({ x: 3, y: 3, z: 3, w: 0 }, 'X');
+    const res = b.checkWinner();
+    expect(res.winner).toBe('X');
+    expect(res.winningLine?.length).toBe(4);
+  });
+
+  test('4x4 3D: Capacidad de 64 casillas', () => {
+    const b = new BoardModel(BoardType.TicTacToe4x4_3D);
+    for (let z = 0; z < 4; ++z) {
+      for (let r = 0; r < 4; ++r) {
+        for (let c = 0; c < 4; ++c) {
+          b.makeMove({ x: r, y: c, z, w: 0 }, (r + c + z) % 2 === 0 ? 'X' : 'O');
+        }
+      }
+    }
+    expect(b.getOccupiedCount()).toBe(64);
+    expect(b.isFull()).toBe(true);
+  });
+
+  test('5x5 Libre: Victoria en diagonal principal (5 casillas)', () => {
+    const b = new BoardModel(BoardType.Connect5x5);
+    expect(b.gridSize).toBe(5);
+    expect(b.winCondition).toBe(5);
+
+    b.makeMove({ x: 0, y: 0, z: 0, w: 0 }, 'X');
+    b.makeMove({ x: 1, y: 1, z: 0, w: 0 }, 'X');
+    b.makeMove({ x: 2, y: 2, z: 0, w: 0 }, 'X');
+    b.makeMove({ x: 3, y: 3, z: 0, w: 0 }, 'X');
+    expect(b.checkWinner().winner).toBe(' ');
+
+    b.makeMove({ x: 4, y: 4, z: 0, w: 0 }, 'X');
+    const res = b.checkWinner();
+    expect(res.winner).toBe('X');
+    expect(res.winningLine?.length).toBe(5);
+  });
+
+  test('5x5 Libre: Capacidad de 25 casillas y detección de empate', () => {
+    const b = new BoardModel(BoardType.Connect5x5);
+    for (let r = 0; r < 5; ++r) {
+      for (let c = 0; c < 5; ++c) {
+        b.makeMove({ x: r, y: c, z: 0, w: 0 }, (r + c) % 2 === 0 ? 'X' : 'O');
+      }
+    }
+    expect(b.getOccupiedCount()).toBe(25);
+    expect(b.isFull()).toBe(true);
+  });
 });

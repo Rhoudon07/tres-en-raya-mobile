@@ -163,16 +163,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         HapticService.mediumImpact();
       }
 
-      // Generar análisis automáticamente
-      const report = ReviewEngine.analyzeGame(state.boardType, updatedHistory);
-
-      // Registrar estadísticas
+      // Registrar estadísticas básicas inmediatamente
       const userSymbol = state.mode === GameMode.PvCPU
         ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
         : state.mode === GameMode.PvP ? 'X' : null;
-      const userAcc = userSymbol === 'X' ? report.accuracyX : userSymbol === 'O' ? report.accuracyO : undefined;
-      useStatsStore.getState().recordMatch(state.boardType, winner as 'X' | 'O' | 'D', userSymbol, userAcc);
+      useStatsStore.getState().recordMatch(state.boardType, winner as 'X' | 'O' | 'D', userSymbol);
 
+      // Activar fin de juego inmediatamente: Modal de resultado aparece instantáneamente (0ms)
+      const currentBoardType = state.boardType;
       set({
         board: state.board.clone(),
         moveHistory: updatedHistory,
@@ -180,8 +178,25 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         resultMessage: msg,
         winningLine: winningLine || null,
         score: newScore,
-        reviewReport: report,
+        reviewReport: null,
       });
+
+      // Ejecutar análisis de partida en segundo plano de forma asíncrona sin bloquear la UI
+      setTimeout(() => {
+        try {
+          const report = ReviewEngine.analyzeGame(currentBoardType, updatedHistory);
+          const currentState = get();
+          if (currentState.gameOver && currentState.moveHistory === updatedHistory) {
+            set({ reviewReport: report });
+            const userAcc = userSymbol === 'X' ? report.accuracyX : userSymbol === 'O' ? report.accuracyO : undefined;
+            if (typeof userAcc === 'number') {
+              useStatsStore.getState().updateLastMatchAccuracy(currentBoardType, userAcc);
+            }
+          }
+        } catch {
+          // Análisis secundario no bloquea la experiencia de usuario
+        }
+      }, 50);
 
       return true;
     }

@@ -10,6 +10,8 @@ export enum BoardType {
   Gravity4x4 = 'Gravity4x4',     // Cuatro en Raya con gravedad (4x4, caída por columna)
   TicTacToe3D = 'TicTacToe3D',   // Tres en Raya 3x3 en 3D (3 pisos, 27 casillas)
   TicTacToe4D = 'TicTacToe4D',   // Tres en Raya 3x3 en 4D (Teseracto 3x3x3x3, 81 casillas)
+  TicTacToe4x4_3D = 'TicTacToe4x4_3D', // Cuatro en Raya 4x4 en 3D (Qubic 4x4x4, 4 pisos, 64 casillas)
+  Connect5x5 = 'Connect5x5',     // Cinco en Raya libre (5x5, 5 en línea libre)
 }
 
 export interface Vector2i {
