@@ -35,8 +35,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
   const modeLabels: Record<BoardType, string> = {
     [BoardType.TicTacToe3x3]: '3x3 Clásico',
     [BoardType.Connect4x4]: '4x4 Libre',
+    [BoardType.Connect5x5]: '5x5 Libre',
     [BoardType.Gravity4x4]: '4x4 Gravedad',
     [BoardType.TicTacToe3D]: '3D (Qubic)',
+    [BoardType.TicTacToe4x4_3D]: '4x4 3D (Qubic 4x4)',
     [BoardType.TicTacToe4D]: '4D (Teseracto)',
   };
 

@@ -6,7 +6,7 @@ import { AIEngine } from '../ai/AIEngine';
 import { Colors } from '../../constants/colors';
 
 export function formatCoord(type: BoardType, pos: Vector4i): string {
-  if (type === BoardType.TicTacToe3D) {
+  if (type === BoardType.TicTacToe3D || type === BoardType.TicTacToe4x4_3D) {
     return `Piso ${pos.z + 1} (Fila ${pos.x + 1}, Col ${pos.y + 1})`;
   } else if (type === BoardType.TicTacToe4D) {
     return `Cubo (${pos.w + 1},${pos.z + 1}) [${pos.x + 1},${pos.y + 1}]`;
@@ -89,7 +89,12 @@ export class ReviewEngine {
             : simBoard.gridSize;
 
           const maxW = simBoard.is4D() ? 3 : 1;
-          const maxZ = simBoard.is3D() || simBoard.is4D() ? 3 : 1;
+          const maxZ =
+            simBoard.type === BoardType.TicTacToe4x4_3D
+              ? 4
+              : simBoard.is3D() || simBoard.is4D()
+              ? 3
+              : 1;
 
           outerLoop: for (let w = 0; w < maxW; ++w) {
             for (let z = 0; z < maxZ; ++z) {

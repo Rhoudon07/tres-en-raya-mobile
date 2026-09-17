@@ -88,6 +88,7 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
     switch (boardType) {
       case BoardType.TicTacToe3x3:
       case BoardType.Connect4x4:
+      case BoardType.Connect5x5:
         return (
           <Board2D
             board={simBoard}
@@ -108,6 +109,7 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
           />
         );
       case BoardType.TicTacToe3D:
+      case BoardType.TicTacToe4x4_3D:
         return (
           <Board3D
             board={simBoard}

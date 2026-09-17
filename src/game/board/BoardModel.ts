@@ -20,7 +20,14 @@ export class BoardModel {
     this.grid = new Map<string, CellSymbol>();
     this.occupiedCount = 0;
 
-    if (type === BoardType.Connect4x4 || type === BoardType.Gravity4x4) {
+    if (type === BoardType.Connect5x5) {
+      this.gridSize = 5;
+      this.winCondition = 5;
+    } else if (
+      type === BoardType.Connect4x4 ||
+      type === BoardType.Gravity4x4 ||
+      type === BoardType.TicTacToe4x4_3D
+    ) {
       this.gridSize = 4;
       this.winCondition = 4;
     } else {
@@ -34,7 +41,7 @@ export class BoardModel {
   }
 
   public is3D(): boolean {
-    return this.type === BoardType.TicTacToe3D;
+    return this.type === BoardType.TicTacToe3D || this.type === BoardType.TicTacToe4x4_3D;
   }
 
   public is4D(): boolean {
@@ -86,7 +93,8 @@ export class BoardModel {
     if (pos.x < 0 || pos.x >= this.gridSize || pos.y < 0 || pos.y >= this.gridSize) {
       return false;
     }
-    const maxZ = this.is3D() || this.is4D() ? 3 : 1;
+    const maxZ =
+      this.type === BoardType.TicTacToe4x4_3D ? 4 : this.is3D() || this.is4D() ? 3 : 1;
     const maxW = this.is4D() ? 3 : 1;
     if (pos.z < 0 || pos.z >= maxZ || pos.w < 0 || pos.w >= maxW) {
       return false;
@@ -111,7 +119,9 @@ export class BoardModel {
   public isFull(): boolean {
     if (this.type === BoardType.TicTacToe3x3) return this.occupiedCount >= 9;
     if (this.type === BoardType.Connect4x4 || this.type === BoardType.Gravity4x4) return this.occupiedCount >= 16;
+    if (this.type === BoardType.Connect5x5) return this.occupiedCount >= 25;
     if (this.type === BoardType.TicTacToe3D) return this.occupiedCount >= 27;
+    if (this.type === BoardType.TicTacToe4x4_3D) return this.occupiedCount >= 64;
     if (this.type === BoardType.TicTacToe4D) return this.occupiedCount >= 81;
     return false;
   }

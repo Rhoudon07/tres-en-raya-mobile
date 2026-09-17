@@ -24,8 +24,10 @@ interface SettingsState {
 const DEFAULT_DIFFICULTIES: Record<BoardType, Difficulty> = {
   [BoardType.TicTacToe3x3]: Difficulty.Medium,
   [BoardType.Connect4x4]: Difficulty.Medium,
+  [BoardType.Connect5x5]: Difficulty.Medium,
   [BoardType.Gravity4x4]: Difficulty.Medium,
   [BoardType.TicTacToe3D]: Difficulty.Easy,
+  [BoardType.TicTacToe4x4_3D]: Difficulty.Medium,
   [BoardType.TicTacToe4D]: Difficulty.Easy,
 };
 
@@ -99,7 +101,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       vibrationEnabled: vibration,
       animationsEnabled: animations,
       showCoordinates: showCoords,
-      difficulties: diffs,
+      difficulties: { ...DEFAULT_DIFFICULTIES, ...(diffs || {}) },
     });
   },
 }));

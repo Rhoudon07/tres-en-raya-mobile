@@ -34,8 +34,10 @@ const DEFAULT_STATS: OverallStats = {
   byMode: {
     [BoardType.TicTacToe3x3]: createEmptyModeStats(),
     [BoardType.Connect4x4]: createEmptyModeStats(),
+    [BoardType.Connect5x5]: createEmptyModeStats(),
     [BoardType.Gravity4x4]: createEmptyModeStats(),
     [BoardType.TicTacToe3D]: createEmptyModeStats(),
+    [BoardType.TicTacToe4x4_3D]: createEmptyModeStats(),
     [BoardType.TicTacToe4D]: createEmptyModeStats(),
   },
 };
@@ -97,6 +99,15 @@ export const useStatsStore = create<StatsState>((set, get) => ({
 
   loadStats: async () => {
     const saved = await StorageService.getItem<OverallStats>('overall_stats', DEFAULT_STATS);
-    set({ stats: saved });
+    set({
+      stats: {
+        ...DEFAULT_STATS,
+        ...(saved || {}),
+        byMode: {
+          ...DEFAULT_STATS.byMode,
+          ...(saved?.byMode || {}),
+        },
+      },
+    });
   },
 }));

@@ -78,6 +78,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
     switch (boardType) {
       case BoardType.TicTacToe3x3:
       case BoardType.Connect4x4:
+      case BoardType.Connect5x5:
         return (
           <Board2D
             board={board}
@@ -96,6 +97,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
           />
         );
       case BoardType.TicTacToe3D:
+      case BoardType.TicTacToe4x4_3D:
         return (
           <Board3D
             board={board}

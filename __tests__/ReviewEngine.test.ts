@@ -34,4 +34,26 @@ describe('ReviewEngine (Game Review & Accuracy)', () => {
     expect(report.accuracyX).toBeGreaterThan(80);
     expect(report.accuracyO).toBeLessThan(60);
   });
+
+  test('Partida 4x4 3D: Victoria en diagonal espacial evaluada correctamente', () => {
+    const history: MoveRecord[] = [
+      { symbol: 'X', pos: { x: 0, y: 0, z: 0, w: 0 } },
+      { symbol: 'O', pos: { x: 0, y: 1, z: 0, w: 0 } },
+      { symbol: 'X', pos: { x: 1, y: 1, z: 1, w: 0 } },
+      { symbol: 'O', pos: { x: 0, y: 2, z: 0, w: 0 } },
+      { symbol: 'X', pos: { x: 2, y: 2, z: 2, w: 0 } },
+      { symbol: 'O', pos: { x: 0, y: 3, z: 0, w: 0 } }, // Pifia: no bloquea (3,3,3)!
+      { symbol: 'X', pos: { x: 3, y: 3, z: 3, w: 0 } }, // Victoria!
+    ];
+
+    const report = ReviewEngine.analyzeGame(BoardType.TicTacToe4x4_3D, history);
+
+    expect(report.analyses.length).toBe(7);
+    expect(report.analyses[6].quality).toBe(MoveQuality.Best);
+    expect(report.analyses[6].accuracy).toBe(100);
+
+    // Jugada 6 de O no bloqueó (3,3,3)
+    expect(report.analyses[5].quality).toBe(MoveQuality.Blunder);
+    expect(report.analyses[5].suggestedMove).toEqual({ x: 3, y: 3, z: 3, w: 0 });
+  });
 });
