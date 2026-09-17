@@ -5,12 +5,14 @@ import { Colors } from '../constants/colors';
 import { GameCard } from '../components/common/GameCard';
 import { GameButton } from '../components/common/GameButton';
 import { Badge } from '../components/common/Badge';
+import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
 
 interface AboutScreenProps {
   navigation: any;
 }
 
 export const AboutScreen: React.FC<AboutScreenProps> = ({ navigation }) => {
+  useDisableAndroidBack();
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>

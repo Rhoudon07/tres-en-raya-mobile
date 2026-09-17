@@ -1,6 +1,7 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, ScrollView, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import { BoardType } from '../types/board';
 import { useGameStore } from '../stores/useGameStore';
@@ -35,6 +36,35 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   const soundEnabled = useSettingsStore((state) => state.soundEnabled);
   const setSoundEnabled = useSettingsStore((state) => state.setSoundEnabled);
   const diff = useSettingsStore((state) => state.difficulties[boardType]);
+
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+
+  // Sincronizar visibilidad del modal de resultado con el estado del juego
+  useEffect(() => {
+    if (gameOver) {
+      setResultModalVisible(true);
+    } else {
+      setResultModalVisible(false);
+    }
+  }, [gameOver]);
+
+  // Manejo del botón 'ir atrás' de Android:
+  // - Si el modal de resultado está abierto, lo cierra.
+  // - Si no hay modal abierto, bloquea el botón para forzar navegación por los botones de la pantalla.
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (resultModalVisible) {
+          setResultModalVisible(false);
+          return true;
+        }
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [resultModalVisible])
+  );
 
   const handleCellPress = (pos: any) => {
     playMove(pos);
@@ -132,13 +162,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
 
         {/* Botones inferiores de acción */}
         <View style={styles.bottomControls}>
-          <GameButton
-            title="REINICIAR TABLERO"
-            variant="secondary"
-            size="small"
-            onPress={restartCurrentGame}
-            style={styles.bottomBtn}
-          />
+          {gameOver && !resultModalVisible ? (
+            <GameButton
+              title="VER RESULTADO"
+              variant="accent"
+              size="small"
+              onPress={() => setResultModalVisible(true)}
+              style={styles.bottomBtn}
+            />
+          ) : (
+            <GameButton
+              title="REINICIAR TABLERO"
+              variant="secondary"
+              size="small"
+              onPress={restartCurrentGame}
+              style={styles.bottomBtn}
+            />
+          )}
           <GameButton
             title="CAMBIAR MODO"
             variant="outline"
@@ -151,7 +191,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
 
       {/* Modal de fin de partida */}
       <ResultModal
-        visible={gameOver}
+        visible={resultModalVisible}
         resultMessage={resultMessage}
         winner={
           winningLine && winningLine.length > 0
@@ -160,11 +200,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
             ? 'D'
             : ' '
         }
-        onPlayAgain={restartCurrentGame}
+        onPlayAgain={() => {
+          setResultModalVisible(false);
+          restartCurrentGame();
+        }}
         onAnalyze={() => {
+          setResultModalVisible(false);
           navigation.navigate('Review');
         }}
-        onReturnToMenu={() => navigation.navigate('Home')}
+        onReturnToMenu={() => {
+          setResultModalVisible(false);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          });
+        }}
       />
     </SafeAreaView>
   );

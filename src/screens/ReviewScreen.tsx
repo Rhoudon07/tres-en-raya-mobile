@@ -13,12 +13,14 @@ import { ReviewCard } from '../components/review/ReviewCard';
 import { ReviewControls } from '../components/review/ReviewControls';
 import { AccuracyBar } from '../components/common/AccuracyBar';
 import { GameButton } from '../components/common/GameButton';
+import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
 
 interface ReviewScreenProps {
   navigation: any;
 }
 
 export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
+  useDisableAndroidBack();
   const boardType = useGameStore((state) => state.boardType);
   const moveHistory = useGameStore((state) => state.moveHistory || []);
   const generateReviewReport = useGameStore((state) => state.generateReviewReport);

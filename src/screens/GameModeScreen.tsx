@@ -8,12 +8,14 @@ import { useGameStore } from '../stores/useGameStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { GameButton } from '../components/common/GameButton';
 import { GameCard } from '../components/common/GameCard';
+import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
 
 interface GameModeScreenProps {
   navigation: any;
 }
 
 export const GameModeScreen: React.FC<GameModeScreenProps> = ({ navigation }) => {
+  useDisableAndroidBack();
   const boardType = useGameStore((state) => state.boardType);
   const startNewGame = useGameStore((state) => state.startNewGame);
 

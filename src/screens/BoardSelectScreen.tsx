@@ -6,6 +6,7 @@ import { BoardType } from '../types/board';
 import { useGameStore } from '../stores/useGameStore';
 import { Badge } from '../components/common/Badge';
 import { GameButton } from '../components/common/GameButton';
+import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
 
 interface BoardSelectScreenProps {
   navigation: any;
@@ -76,6 +77,7 @@ const BOARDS: BoardOption[] = [
 ];
 
 export const BoardSelectScreen: React.FC<BoardSelectScreenProps> = ({ navigation }) => {
+  useDisableAndroidBack();
   const setBoardType = useGameStore((state) => state.setBoardType);
 
   const handleSelectBoard = (type: BoardType) => {

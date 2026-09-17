@@ -7,12 +7,14 @@ import { useStatsStore } from '../stores/useStatsStore';
 import { GameCard } from '../components/common/GameCard';
 import { GameButton } from '../components/common/GameButton';
 import { Badge } from '../components/common/Badge';
+import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
 
 interface StatisticsScreenProps {
   navigation: any;
 }
 
 export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({ navigation }) => {
+  useDisableAndroidBack();
   const stats = useStatsStore((state) => state.stats);
   const resetAllStats = useStatsStore((state) => state.resetAllStats);
 

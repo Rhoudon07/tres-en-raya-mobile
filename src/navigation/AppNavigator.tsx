@@ -32,6 +32,7 @@ export const AppNavigator: React.FC = () => {
         headerShown: false,
         contentStyle: { backgroundColor: Colors.background },
         animation: 'slide_from_right',
+        gestureEnabled: false,
       }}
     >
       <Stack.Screen name="Home" component={HomeScreen} />

@@ -8,12 +8,14 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { useStatsStore } from '../stores/useStatsStore';
 import { GameCard } from '../components/common/GameCard';
 import { GameButton } from '../components/common/GameButton';
+import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
 
 interface SettingsScreenProps {
   navigation: any;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
+  useDisableAndroidBack();
   const {
     soundEnabled,
     vibrationEnabled,

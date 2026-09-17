@@ -1,24 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, Animated } from 'react-native';
 import { Colors } from '../../constants/colors';
-import { GameButton } from '../common/GameButton';
+import { GameButton } from './GameButton';
 
-interface ResultModalProps {
+interface ExitConfirmModalProps {
   visible: boolean;
-  resultMessage: string;
-  winner: 'X' | 'O' | 'D' | ' ';
-  onPlayAgain: () => void;
-  onAnalyze: () => void;
-  onReturnToMenu: () => void;
+  onCancel: () => void;
+  onConfirm: () => void;
 }
 
-export const ResultModal: React.FC<ResultModalProps> = ({
+export const ExitConfirmModal: React.FC<ExitConfirmModalProps> = ({
   visible,
-  resultMessage,
-  winner,
-  onPlayAgain,
-  onAnalyze,
-  onReturnToMenu,
+  onCancel,
+  onConfirm,
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
@@ -28,7 +22,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 220,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
@@ -46,45 +40,36 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
   if (!visible) return null;
 
-  const getHeaderColor = () => {
-    if (winner === 'X') return Colors.playerX;
-    if (winner === 'O') return Colors.playerO;
-    if (winner === 'D') return Colors.winLine;
-    return Colors.textPrimary;
-  };
-
   return (
     <Animated.View style={[styles.overlayContainer, { opacity: fadeAnim }]} pointerEvents="auto">
       <View style={styles.backdrop}>
         <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
-          <Text style={[styles.title, { color: getHeaderColor() }]}>
-            {winner === 'D' ? 'EMPATE' : '¡VICTORIA!'}
-          </Text>
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconText}>🚪</Text>
+          </View>
 
-          <Text style={styles.message}>{resultMessage}</Text>
+          <Text style={styles.title}>¿SALIR DEL JUEGO?</Text>
+
+          <Text style={styles.message}>
+            ¿Estás seguro de que deseas cerrar la aplicación?
+          </Text>
 
           <View style={styles.actions}>
             <GameButton
-              title="JUGAR OTRA VEZ"
+              title="SALIR"
               variant="accent"
               size="medium"
-              onPress={onPlayAgain}
+              onPress={onConfirm}
+              style={styles.exitBtn}
+              textStyle={{ color: Colors.textPrimary }}
             />
 
             <GameButton
-              title="ANALIZAR PARTIDA"
-              variant="primary"
-              size="medium"
-              style={styles.analyzeBtn}
-              textStyle={{ color: Colors.reviewBest }}
-              onPress={onAnalyze}
-            />
-
-            <GameButton
-              title="MENÚ PRINCIPAL"
+              title="CANCELAR"
               variant="secondary"
               size="medium"
-              onPress={onReturnToMenu}
+              onPress={onCancel}
+              style={styles.cancelBtn}
             />
           </View>
         </Animated.View>
@@ -108,7 +93,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 360,
     backgroundColor: Colors.modalSurface,
     borderColor: Colors.modalBorder,
     borderWidth: 2,
@@ -118,29 +103,48 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
-    shadowRadius: 16,
+    shadowRadius: 20,
     elevation: 10,
   },
-  title: {
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 77, 121, 0.15)',
+    borderWidth: 1.5,
+    borderColor: Colors.playerO,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  iconText: {
     fontSize: 26,
+  },
+  title: {
+    fontSize: 20,
     fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 8,
+    color: Colors.playerO,
+    letterSpacing: 1.2,
+    marginBottom: 10,
     textAlign: 'center',
   },
   message: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.textSecondary,
-    marginBottom: 24,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
+    marginBottom: 22,
   },
   actions: {
     width: '100%',
+    gap: 10,
   },
-  analyzeBtn: {
-    borderColor: Colors.reviewBest,
-    backgroundColor: '#162e24',
+  exitBtn: {
+    backgroundColor: Colors.playerO,
+    borderColor: Colors.playerO,
+  },
+  cancelBtn: {
+    marginTop: 4,
   },
 });

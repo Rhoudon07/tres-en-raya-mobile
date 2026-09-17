@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, StatusBar } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, Text, View, StatusBar, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Colors } from '../constants/colors';
 import { GameButton } from '../components/common/GameButton';
+import { ExitConfirmModal } from '../components/common/ExitConfirmModal';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useStatsStore } from '../stores/useStatsStore';
 
@@ -20,6 +22,24 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const loadSettings = useSettingsStore((state) => state.loadSettings);
   const loadStats = useStatsStore((state) => state.loadStats);
+  const [exitModalVisible, setExitModalVisible] = useState(false);
+
+  // Manejar el botón 'ir atrás' del sistema Android en el Menú Principal
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (exitModalVisible) {
+          setExitModalVisible(false);
+          return true;
+        }
+        setExitModalVisible(true);
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [exitModalVisible])
+  );
 
   // Animación suave de partículas decorativas de fondo
   const floatAnim1 = useSharedValue(0);
@@ -110,6 +130,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           C++17 & SFML Port • Android & iOS Ready
         </Text>
       </View>
+
+      {/* Modal de confirmación para salir del juego */}
+      <ExitConfirmModal
+        visible={exitModalVisible}
+        onCancel={() => setExitModalVisible(false)}
+        onConfirm={() => BackHandler.exitApp()}
+      />
     </SafeAreaView>
   );
 };
