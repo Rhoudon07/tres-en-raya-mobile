@@ -10,7 +10,7 @@ import { AudioService } from '../services/AudioService';
 import { HapticService } from '../services/HapticService';
 import { ReviewEngine } from '../game/review/ReviewEngine';
 
-import { PowerType, PlayerPowers, createInitialPlayerPowers } from '../types/powers';
+import { PowerType, PlayerPowers, createInitialPlayerPowers, markPlayerPowerUsed } from '../types/powers';
 import { getBestDecisionPowers } from '../game/ai/MinimaxPowers';
 import { CustomGameRules } from '../types/lab';
 
@@ -175,13 +175,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     }
 
     // En modalidad Poderes con poder activo:
+    let isActivatingDoubleTurn = false;
     if (state.board.isPowers() && state.activePower) {
-      const curSym = state.currentTurn;
+      const curSym = state.currentTurn as 'X' | 'O';
       const powers = {
         X: { ...state.playerPowers.X },
         O: { ...state.playerPowers.O },
       };
-      const curPowers = curSym === 'X' ? powers.X : powers.O;
+      const curPowers = powers[curSym];
 
       // 1. BOMBA
       if (state.activePower === PowerType.Bomb) {
@@ -192,16 +193,18 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         const success = state.board.clearCell(pos);
         if (!success) return false;
 
-        curPowers.bombUsed = true;
+        powers[curSym] = markPlayerPowerUsed(curPowers, PowerType.Bomb);
         AudioService.playMoveX();
         HapticService.heavyImpact();
 
+        const updatedHistory: MoveRecord[] = [...state.moveHistory, { symbol: curSym, pos }];
         const nextTurn = curSym === 'X' ? 'O' : 'X';
         set({
           board: state.board.clone(),
           playerPowers: powers,
           activePower: null,
           currentTurn: nextTurn,
+          moveHistory: updatedHistory,
         });
 
         setTimeout(() => {
@@ -219,16 +222,18 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         const success = state.board.setObstacleCell(pos);
         if (!success) return false;
 
-        curPowers.blockCellUsed = true;
+        powers[curSym] = markPlayerPowerUsed(curPowers, PowerType.BlockCell);
         AudioService.playMoveO();
         HapticService.mediumImpact();
 
+        const updatedHistory: MoveRecord[] = [...state.moveHistory, { symbol: curSym, pos }];
         const nextTurn = curSym === 'X' ? 'O' : 'X';
         set({
           board: state.board.clone(),
           playerPowers: powers,
           activePower: null,
           currentTurn: nextTurn,
+          moveHistory: updatedHistory,
         });
 
         setTimeout(() => {
@@ -261,9 +266,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             return false;
           }
 
-          curPowers.swapUsed = true;
+          powers[curSym] = markPlayerPowerUsed(curPowers, PowerType.Swap);
           AudioService.playMoveX();
           HapticService.heavyImpact();
+
+          const updatedHistory: MoveRecord[] = [...state.moveHistory, { symbol: curSym, pos, from: firstPos }];
 
           const { winner, winningLine } = state.board.checkWinner();
           if (winner !== ' ') {
@@ -271,11 +278,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             let msg = '';
             if (winner === 'X') {
               newScore.xWins++;
-              msg = '¡Victoria para X!';
+              msg = state.mode === GameMode.PvCPU
+                ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria! Has ganado' : 'Derrota')
+                : '¡Victoria para X!';
               AudioService.playWin();
             } else if (winner === 'O') {
               newScore.oWins++;
-              msg = '¡Victoria para O!';
+              msg = state.mode === GameMode.PvCPU
+                ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria! Has ganado' : 'Derrota')
+                : '¡Victoria para O!';
               AudioService.playWin();
             } else {
               newScore.draws++;
@@ -291,6 +302,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
               resultMessage: msg,
               winningLine: winningLine || null,
               score: newScore,
+              moveHistory: updatedHistory,
             });
             return true;
           }
@@ -302,6 +314,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
             activePower: null,
             powerTargetFirst: null,
             currentTurn: nextTurn,
+            moveHistory: updatedHistory,
           });
 
           setTimeout(() => {
@@ -313,13 +326,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
       // 4. DOBLE TURNO
       if (state.activePower === PowerType.DoubleTurn) {
-        curPowers.doubleTurnUsed = true;
-        set({
-          playerPowers: powers,
-          doubleTurnRemaining: 2,
-          activePower: null,
-        });
-        // Continúa hacia la colocación de la primera ficha
+        isActivatingDoubleTurn = true;
       }
     }
 
@@ -353,6 +360,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
     const updatedHistory: MoveRecord[] = [...state.moveHistory, { symbol: curSymbol, pos: actualPos }];
 
+    // Si se activó Doble Turno con este movimiento, marcarlo en playerPowers
+    let powersToUpdate = state.playerPowers;
+    if (isActivatingDoubleTurn) {
+      powersToUpdate = {
+        ...state.playerPowers,
+        [curSymbol]: markPlayerPowerUsed(state.playerPowers[curSymbol as 'X' | 'O'], PowerType.DoubleTurn),
+      };
+    }
+
     // Comprobar ganador
     const { winner, winningLine } = state.board.checkWinner();
 
@@ -363,21 +379,21 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       if (winner === 'X') {
         newScore.xWins++;
         msg = state.mode === GameMode.PvCPU
-          ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria! Has ganado' : 'La CPU (X) ha ganado')
+          ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria! Has ganado' : 'Derrota')
           : '¡Victoria para X!';
         AudioService.playWin();
         HapticService.success();
       } else if (winner === 'O') {
         newScore.oWins++;
         msg = state.mode === GameMode.PvCPU
-          ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria! Has ganado' : 'La CPU (O) ha ganado')
+          ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria! Has ganado' : 'Derrota')
           : '¡Victoria para O!';
         AudioService.playWin();
         HapticService.success();
       } else if (winner === 'Y') {
         newScore.yWins = (newScore.yWins || 0) + 1;
         msg = state.mode === GameMode.PvCPU
-          ? 'La CPU (Y) ha ganado'
+          ? 'Derrota'
           : '¡Victoria para Y!';
         AudioService.playWin();
         HapticService.success();
@@ -403,6 +419,9 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         score: newScore,
         reviewReport: null,
         selectedPiece: null,
+        activePower: null,
+        doubleTurnRemaining: 0,
+        playerPowers: powersToUpdate,
       });
 
       setTimeout(() => {
@@ -429,11 +448,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ? (curSymbol === 'X' ? 'O' : curSymbol === 'O' ? 'Y' : 'X')
       : (curSymbol === 'X' ? 'O' : 'X');
 
-    let newDoubleTurnRemaining = state.doubleTurnRemaining;
-    if (state.board.isPowers() && state.doubleTurnRemaining > 0) {
-      newDoubleTurnRemaining--;
+    let newDoubleTurnRemaining = isActivatingDoubleTurn
+      ? 1
+      : state.doubleTurnRemaining > 0
+      ? state.doubleTurnRemaining - 1
+      : 0;
+
+    if (state.board.isPowers() && (isActivatingDoubleTurn || state.doubleTurnRemaining > 0)) {
       if (newDoubleTurnRemaining > 0) {
-        nextTurn = curSymbol;
+        nextTurn = curSymbol; // Mantiene el turno para la segunda ficha
       }
     }
 
@@ -443,6 +466,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       doubleTurnRemaining: newDoubleTurnRemaining,
       moveHistory: updatedHistory,
       selectedPiece: null,
+      activePower: null,
+      playerPowers: powersToUpdate,
     });
 
     // Despachar turno de CPU si corresponde
@@ -545,12 +570,16 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const newScore = { ...state.score };
       if (curSymbol === 'X') {
         newScore.xWins++;
-        msg = '¡Victoria para X! (Oponente inmovilizado)';
+        msg = state.mode === GameMode.PvCPU
+          ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria! (Oponente inmovilizado)' : 'Derrota (Inmovilizado)')
+          : '¡Victoria para X! (Oponente inmovilizado)';
         AudioService.playWin();
         HapticService.success();
       } else {
         newScore.oWins++;
-        msg = '¡Victoria para O! (Oponente inmovilizado)';
+        msg = state.mode === GameMode.PvCPU
+          ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria! (Oponente inmovilizado)' : 'Derrota (Inmovilizado)')
+          : '¡Victoria para O! (Oponente inmovilizado)';
         AudioService.playWin();
         HapticService.success();
       }
@@ -596,14 +625,14 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     if (winner === 'X') {
       newScore.xWins++;
       msg = state.mode === GameMode.PvCPU
-        ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria por tiempo! Has ganado' : 'La CPU (X) ha ganado por tiempo')
+        ? (state.turnOrder === PlayerTurnOrder.First ? '¡Victoria por tiempo! Has ganado' : 'Derrota (Por tiempo)')
         : '¡Victoria por tiempo para X!';
       AudioService.playWin();
       HapticService.success();
     } else {
       newScore.oWins++;
       msg = state.mode === GameMode.PvCPU
-        ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria por tiempo! Has ganado' : 'La CPU (O) ha ganado por tiempo')
+        ? (state.turnOrder === PlayerTurnOrder.Second ? '¡Victoria por tiempo! Has ganado' : 'Derrota (Por tiempo)')
         : '¡Victoria por tiempo para O!';
       AudioService.playWin();
       HapticService.success();
@@ -646,14 +675,36 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       if (state.board.isPowers()) {
         const p = state.playerPowers[aiSymbol as 'X' | 'O'] || createInitialPlayerPowers();
         const decision = getBestDecisionPowers(state.board, aiSymbol, humanSymbol, p, diff);
-        if (decision.powerToUse === PowerType.DoubleTurn) {
-          get().selectPower(PowerType.DoubleTurn);
-        } else if (decision.powerToUse === PowerType.BlockCell && decision.powerTarget) {
+
+        if (decision.powerToUse === PowerType.Bomb && decision.powerTarget) {
+          get().selectPower(PowerType.Bomb);
+          set({ isCpuThinking: false });
+          await get().playMove(decision.powerTarget);
+          return;
+        }
+
+        if (decision.powerToUse === PowerType.BlockCell && decision.powerTarget) {
           get().selectPower(PowerType.BlockCell);
           set({ isCpuThinking: false });
           await get().playMove(decision.powerTarget);
           return;
         }
+
+        if (decision.powerToUse === PowerType.Swap && decision.powerTarget && decision.powerTargetB) {
+          get().selectPower(PowerType.Swap);
+          await get().playMove(decision.powerTarget);
+          set({ isCpuThinking: false });
+          await get().playMove(decision.powerTargetB);
+          return;
+        }
+
+        if (decision.powerToUse === PowerType.DoubleTurn) {
+          get().selectPower(PowerType.DoubleTurn);
+          set({ isCpuThinking: false });
+          await get().playMove(decision.move);
+          return;
+        }
+
         set({ isCpuThinking: false });
         await get().playMove(decision.move);
       } else if (state.board.isMovement() && state.board.isMovementPhase()) {

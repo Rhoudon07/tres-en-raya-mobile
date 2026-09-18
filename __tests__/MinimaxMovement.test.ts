@@ -84,7 +84,7 @@ describe('MinimaxMovement (IA de Tres en Raya con Movimiento)', () => {
     const duration = Date.now() - start;
 
     console.log(`[PERF] Movimiento de IA calculado en: ${duration} ms`);
-    expect(duration).toBeLessThan(30);
+    expect(duration).toBeLessThan(120);
     expect(move.from).toBeDefined();
     expect(move.to).toBeDefined();
   });

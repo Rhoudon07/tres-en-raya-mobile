@@ -10,4 +10,5 @@ export interface PuzzleDef {
   initialMoves: { pos: Vector4i; symbol: 'X' | 'O' }[];
   targetMove: Vector4i;
   explanation: string;
+  obstacles?: Vector4i[];
 }

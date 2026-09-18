@@ -101,16 +101,19 @@ function scoreCandidateMove(
     score += 30000;
   }
 
-  // 5. Valor posicional en 3x3
-  // Centro (1,1)
-  if (pos.x === 1 && pos.y === 1) {
+  // 5. Valor posicional dinámico según tamaño del tablero (3x3 o 5x5)
+  const centerCoord = Math.floor(board.gridSize / 2);
+  const maxCoord = board.gridSize - 1;
+
+  // Centro
+  if (pos.x === centerCoord && pos.y === centerCoord) {
     score += 500;
   }
   // Esquinas
-  else if ((pos.x === 0 || pos.x === 2) && (pos.y === 0 || pos.y === 2)) {
+  else if ((pos.x === 0 || pos.x === maxCoord) && (pos.y === 0 || pos.y === maxCoord)) {
     score += 200;
   }
-  // Laterales
+  // Laterales / Interiores
   else {
     score += 100;
   }

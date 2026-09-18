@@ -7,12 +7,22 @@ interface ExitConfirmModalProps {
   visible: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  title?: string;
+  message?: string;
+  confirmText?: string;
+  cancelText?: string;
+  icon?: string;
 }
 
 export const ExitConfirmModal: React.FC<ExitConfirmModalProps> = ({
   visible,
   onCancel,
   onConfirm,
+  title = '¿SALIR DEL JUEGO?',
+  message = '¿Estás seguro de que deseas cerrar la aplicación?',
+  confirmText = 'SALIR',
+  cancelText = 'CANCELAR',
+  icon = '🚪',
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
@@ -45,18 +55,16 @@ export const ExitConfirmModal: React.FC<ExitConfirmModalProps> = ({
       <View style={styles.backdrop}>
         <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
           <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>🚪</Text>
+            <Text style={styles.iconText}>{icon}</Text>
           </View>
 
-          <Text style={styles.title}>¿SALIR DEL JUEGO?</Text>
+          <Text style={styles.title}>{title}</Text>
 
-          <Text style={styles.message}>
-            ¿Estás seguro de que deseas cerrar la aplicación?
-          </Text>
+          <Text style={styles.message}>{message}</Text>
 
           <View style={styles.actions}>
             <GameButton
-              title="SALIR"
+              title={confirmText}
               variant="accent"
               size="medium"
               onPress={onConfirm}
@@ -65,7 +73,7 @@ export const ExitConfirmModal: React.FC<ExitConfirmModalProps> = ({
             />
 
             <GameButton
-              title="CANCELAR"
+              title={cancelText}
               variant="secondary"
               size="medium"
               onPress={onCancel}

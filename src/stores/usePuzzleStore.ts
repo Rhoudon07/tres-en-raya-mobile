@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { BoardModel } from '../game/board/BoardModel';
-import { Vector4i, areVectorsEqual } from '../types/board';
+import { Vector4i, areVectorsEqual, BoardType } from '../types/board';
 import { PuzzleDef } from '../types/puzzle';
 import { PUZZLE_CATALOG } from '../game/puzzles/PuzzleCatalog';
 import { AudioService } from '../services/AudioService';
@@ -23,7 +23,8 @@ interface PuzzleState {
 }
 
 function initBoardForPuzzle(puzzle: PuzzleDef): BoardModel {
-  const board = new BoardModel(puzzle.boardType);
+  const obstacles = puzzle.obstacles || (puzzle.boardType === BoardType.Obstacles4x4 ? BoardModel.DEFAULT_OBSTACLES : undefined);
+  const board = new BoardModel(puzzle.boardType, undefined, obstacles);
   for (const move of puzzle.initialMoves) {
     board.makeMove(move.pos, move.symbol);
   }

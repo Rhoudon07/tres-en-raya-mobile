@@ -5,6 +5,8 @@ import { Vector4i, areVectorsEqual, CellSymbol } from '../../types/board';
 import { Colors } from '../../constants/colors';
 import { Cell2D } from './Cell2D';
 
+import { PowerType } from '../../types/powers';
+
 interface Board2DProps {
   board: BoardModel;
   onCellPress: (pos: Vector4i) => void;
@@ -12,6 +14,8 @@ interface Board2DProps {
   suggestedCell?: Vector4i | null;
   currentTurn?: CellSymbol;
   selectedPiece?: Vector4i | null;
+  activePower?: PowerType | null;
+  powerTargetFirst?: Vector4i | null;
   disabled?: boolean;
 }
 
@@ -22,6 +26,8 @@ export const Board2D: React.FC<Board2DProps> = ({
   suggestedCell,
   currentTurn,
   selectedPiece,
+  activePower,
+  powerTargetFirst,
   disabled = false,
 }) => {
   const { width } = useWindowDimensions();
@@ -51,8 +57,10 @@ export const Board2D: React.FC<Board2DProps> = ({
   };
 
   const isCellSelected = (r: number, c: number): boolean => {
-    if (!selectedPiece) return false;
-    return areVectorsEqual({ x: r, y: c, z: 0, w: 0 }, selectedPiece);
+    const currentPos = { x: r, y: c, z: 0, w: 0 };
+    if (selectedPiece && areVectorsEqual(currentPos, selectedPiece)) return true;
+    if (powerTargetFirst && areVectorsEqual(currentPos, powerTargetFirst)) return true;
+    return false;
   };
 
   const isCellDestination = (r: number, c: number): boolean => {
@@ -62,8 +70,35 @@ export const Board2D: React.FC<Board2DProps> = ({
   };
 
   const isCellSelectable = (r: number, c: number): boolean => {
-    if (!board.isMovement() || !board.isMovementPhase() || !currentTurn) return false;
-    return board.getCell({ x: r, y: c, z: 0, w: 0 }) === currentTurn;
+    const pos = { x: r, y: c, z: 0, w: 0 };
+    const cellSym = board.getCell(pos);
+
+    // Modo Movimiento
+    if (board.isMovement() && board.isMovementPhase() && currentTurn) {
+      return cellSym === currentTurn;
+    }
+
+    // Modo Poderes
+    if (board.isPowers() && activePower) {
+      if (activePower === PowerType.Bomb) {
+        // Puede bombardear cualquier ficha (X u O)
+        return cellSym === 'X' || cellSym === 'O';
+      }
+      if (activePower === PowerType.Swap) {
+        // Puede intercambiar fichas del tablero (X u O)
+        return cellSym === 'X' || cellSym === 'O';
+      }
+      if (activePower === PowerType.BlockCell) {
+        // Puede bloquear casillas vacías
+        return cellSym === ' ';
+      }
+      if (activePower === PowerType.DoubleTurn) {
+        // Puede colocar en casillas vacías
+        return cellSym === ' ';
+      }
+    }
+
+    return false;
   };
 
   return (

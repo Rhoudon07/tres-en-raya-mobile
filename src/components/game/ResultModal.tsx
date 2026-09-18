@@ -51,9 +51,13 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
   if (!visible) return null;
 
+  const isDefeat = resultMessage.includes('Derrota');
+
   const getHeaderColor = () => {
+    if (isDefeat) return Colors.playerO;
     if (winner === 'X') return Colors.playerX;
     if (winner === 'O') return Colors.playerO;
+    if (winner === 'Y') return Colors.playerY;
     if (winner === 'D') return Colors.winLine;
     return Colors.textPrimary;
   };
@@ -63,7 +67,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
       <View style={styles.backdrop}>
         <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
           <Text style={[styles.title, { color: getHeaderColor() }]}>
-            {winner === 'D' ? 'EMPATE' : '¡VICTORIA!'}
+            {winner === 'D' ? 'EMPATE' : isDefeat ? 'DERROTA' : '¡VICTORIA!'}
           </Text>
 
           <Text style={styles.message}>{resultMessage}</Text>

@@ -37,6 +37,7 @@ const DEFAULT_DIFFICULTIES: Record<BoardType, Difficulty> = {
   [BoardType.TimeAttack3x3]: Difficulty.Medium,
   [BoardType.Obstacles4x4]: Difficulty.Medium,
   [BoardType.ThreePlayers3x3]: Difficulty.Medium,
+  [BoardType.ThreePlayers5x5]: Difficulty.Medium,
   [BoardType.Powers3x3]: Difficulty.Medium,
   [BoardType.Custom]: Difficulty.Medium,
 };

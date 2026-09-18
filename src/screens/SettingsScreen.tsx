@@ -47,7 +47,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
     [BoardType.Ultimate]: 'Ultimate (9 Tableros)',
     [BoardType.Obstacles4x4]: '4x4 con Obstáculos',
     [BoardType.ThreePlayers3x3]: '3 Jugadores (3x3)',
-    [BoardType.Powers3x3]: '3x3 con Habilidades',
+    [BoardType.ThreePlayers5x5]: '3 Jugadores (5x5)',
+    [BoardType.Powers3x3]: '5x5 con Habilidades',
     [BoardType.Custom]: 'Modo Laboratorio',
   };
 

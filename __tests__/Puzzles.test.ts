@@ -1,6 +1,7 @@
 import { PUZZLE_CATALOG } from '../src/game/puzzles/PuzzleCatalog';
 import { usePuzzleStore } from '../src/stores/usePuzzleStore';
 import { BoardModel } from '../src/game/board/BoardModel';
+import { BoardType } from '../src/types/board';
 
 describe('Puzzles (Desafíos Tácticos)', () => {
   test('el catálogo contiene puzzles estructurados y válidos', () => {
@@ -12,7 +13,11 @@ describe('Puzzles (Desafíos Tácticos)', () => {
       expect(p.initialMoves.length).toBeGreaterThan(0);
 
       // Simular inicialización en un BoardModel
-      const b = new BoardModel(p.boardType);
+      const b = new BoardModel(
+        p.boardType,
+        undefined,
+        p.obstacles || (p.boardType === BoardType.Obstacles4x4 ? BoardModel.DEFAULT_OBSTACLES : undefined)
+      );
       for (const m of p.initialMoves) {
         expect(b.makeMove(m.pos, m.symbol)).toBe(true);
       }

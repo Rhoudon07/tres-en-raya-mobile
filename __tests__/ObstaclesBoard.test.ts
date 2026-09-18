@@ -8,62 +8,68 @@ describe('ObstaclesBoard (Modo 4x4 con Obstáculos)', () => {
     board = new BoardModel(BoardType.Obstacles4x4);
   });
 
-  test('inicializa con obstáculos por defecto y 14 casillas válidas', () => {
+  test('inicializa con obstáculos aleatorios y 14 casillas válidas', () => {
     expect(board.isObstacles()).toBe(true);
     expect(board.gridSize).toBe(4);
     expect(board.winCondition).toBe(4);
+    expect(board.obstacles).toBeDefined();
+    expect(board.obstacles?.length).toBe(2);
 
-    const corner1: Vector4i = { x: 0, y: 0, z: 0, w: 0 };
-    const corner2: Vector4i = { x: 3, y: 3, z: 0, w: 0 };
-
-    expect(board.isCellBlocked(corner1)).toBe(true);
-    expect(board.isCellBlocked(corner2)).toBe(true);
-    expect(board.getCell(corner1)).toBe('#');
-    expect(board.getCell(corner2)).toBe('#');
+    for (const obs of board.obstacles || []) {
+      expect(board.isCellBlocked(obs)).toBe(true);
+      expect(board.getCell(obs)).toBe('#');
+    }
 
     const validMoves = board.getValidMoves();
     expect(validMoves.length).toBe(14);
-    expect(validMoves.some((m) => m.x === 0 && m.y === 0)).toBe(false);
-    expect(validMoves.some((m) => m.x === 3 && m.y === 3)).toBe(false);
   });
 
-  test('rechaza jugadas sobre casillas con obstáculos', () => {
-    const blockedPos: Vector4i = { x: 0, y: 0, z: 0, w: 0 };
-    expect(board.isMoveValid(blockedPos)).toBe(false);
-    expect(board.makeMove(blockedPos, 'X')).toBe(false);
-    expect(board.getCell(blockedPos)).toBe('#');
+  test('permite obstáculos personalizados y rechaza jugadas sobre ellos', () => {
+    const custom = new BoardModel(BoardType.Obstacles4x4, undefined, BoardModel.DEFAULT_OBSTACLES);
+    const corner1: Vector4i = { x: 0, y: 0, z: 0, w: 0 };
+    expect(custom.isCellBlocked(corner1)).toBe(true);
+    expect(custom.getCell(corner1)).toBe('#');
+    expect(custom.isMoveValid(corner1)).toBe(false);
+    expect(custom.makeMove(corner1, 'X')).toBe(false);
   });
 
   test('una línea con obstáculo no puede formar victoria', () => {
+    const fixedBoard = new BoardModel(BoardType.Obstacles4x4, undefined, BoardModel.DEFAULT_OBSTACLES);
     // Fila 0 tiene (0,0) bloqueado.
     // Llenar (0,1), (0,2), (0,3) con X
-    expect(board.makeMove({ x: 0, y: 1, z: 0, w: 0 }, 'X')).toBe(true);
-    expect(board.makeMove({ x: 0, y: 2, z: 0, w: 0 }, 'X')).toBe(true);
-    expect(board.makeMove({ x: 0, y: 3, z: 0, w: 0 }, 'X')).toBe(true);
+    expect(fixedBoard.makeMove({ x: 0, y: 1, z: 0, w: 0 }, 'X')).toBe(true);
+    expect(fixedBoard.makeMove({ x: 0, y: 2, z: 0, w: 0 }, 'X')).toBe(true);
+    expect(fixedBoard.makeMove({ x: 0, y: 3, z: 0, w: 0 }, 'X')).toBe(true);
 
-    const result = board.checkWinner();
+    const result = fixedBoard.checkWinner();
     expect(result.winner).toBe(' '); // No hay 4 en raya porque (0,0) es '#'
   });
 
   test('una línea limpia sin obstáculos permite la victoria con 4 en raya', () => {
+    const fixedBoard = new BoardModel(BoardType.Obstacles4x4, undefined, BoardModel.DEFAULT_OBSTACLES);
     // Fila 1 está totalmente libre de obstáculos
-    expect(board.makeMove({ x: 1, y: 0, z: 0, w: 0 }, 'X')).toBe(true);
-    expect(board.makeMove({ x: 1, y: 1, z: 0, w: 0 }, 'X')).toBe(true);
-    expect(board.makeMove({ x: 1, y: 2, z: 0, w: 0 }, 'X')).toBe(true);
-    expect(board.makeMove({ x: 1, y: 3, z: 0, w: 0 }, 'X')).toBe(true);
+    expect(fixedBoard.makeMove({ x: 1, y: 0, z: 0, w: 0 }, 'X')).toBe(true);
+    expect(fixedBoard.makeMove({ x: 1, y: 1, z: 0, w: 0 }, 'X')).toBe(true);
+    expect(fixedBoard.makeMove({ x: 1, y: 2, z: 0, w: 0 }, 'X')).toBe(true);
+    expect(fixedBoard.makeMove({ x: 1, y: 3, z: 0, w: 0 }, 'X')).toBe(true);
 
-    const result = board.checkWinner();
+    const result = fixedBoard.checkWinner();
     expect(result.winner).toBe('X');
     expect(result.winningLine?.length).toBe(4);
   });
 
-  test('reset reinstaura los obstáculos y vacía el resto', () => {
-    board.makeMove({ x: 1, y: 0, z: 0, w: 0 }, 'X');
+  test('reset reinstaura los mismos obstáculos y vacía las fichas', () => {
+    const validMove = board.getValidMoves()[0];
+    board.makeMove(validMove, 'X');
+    const initialObstacles = [...(board.obstacles || [])];
+
     board.reset();
 
-    expect(board.isCellBlocked({ x: 0, y: 0, z: 0, w: 0 })).toBe(true);
-    expect(board.isCellBlocked({ x: 3, y: 3, z: 0, w: 0 })).toBe(true);
-    expect(board.getCell({ x: 1, y: 0, z: 0, w: 0 })).toBe(' ');
+    for (const obs of initialObstacles) {
+      expect(board.isCellBlocked(obs)).toBe(true);
+      expect(board.getCell(obs)).toBe('#');
+    }
+    expect(board.getCell(validMove)).toBe(' ');
     expect(board.getValidMoves().length).toBe(14);
   });
 });

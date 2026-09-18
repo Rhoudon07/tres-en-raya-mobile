@@ -19,6 +19,7 @@ export enum BoardType {
   TimeAttack3x3 = 'TimeAttack3x3', // Contrarreloj (Límite estricto de tiempo por turno o reloj total)
   Obstacles4x4 = 'Obstacles4x4', // 4x4 con casillas bloqueadas / obstáculos (piedras fijas)
   ThreePlayers3x3 = 'ThreePlayers3x3', // Tres Jugadores simultáneos (X, O, Y en 3x3)
+  ThreePlayers5x5 = 'ThreePlayers5x5', // Tres Jugadores simultáneos (X, O, Y en 5x5 con 4 en raya)
   Powers3x3 = 'Powers3x3',       // Modo con Habilidades Tácticas (Bomba, Doble Turno, Bloqueo, Swap)
   Custom = 'Custom',             // Modo Laboratorio con Reglas Personalizadas
 }

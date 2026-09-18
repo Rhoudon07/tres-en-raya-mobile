@@ -51,9 +51,15 @@ export class BoardModel {
   // Propiedades exclusivas para Fichas Limitadas (máximo 3 fichas por jugador)
   public pieceQueues: { X: Vector4i[]; O: Vector4i[] };
 
+  public obstacles?: Vector4i[];
+
   private undoStack: UndoEntry[];
 
-  constructor(type: BoardType = BoardType.TicTacToe3x3, customRules?: CustomGameRules) {
+  constructor(
+    type: BoardType = BoardType.TicTacToe3x3,
+    customRules?: CustomGameRules,
+    obstacles?: Vector4i[]
+  ) {
     this.type = type;
     this.customRules = customRules;
     this.cells = new Array(300).fill(' ');
@@ -75,9 +81,12 @@ export class BoardModel {
       if (customRules.obstacles > 0) {
         this.initCustomObstacles(customRules.obstacles);
       }
-    } else if (type === BoardType.Connect5x5) {
+    } else if (type === BoardType.Connect5x5 || type === BoardType.Powers3x3) {
       this.gridSize = 5;
       this.winCondition = 5;
+    } else if (type === BoardType.ThreePlayers5x5) {
+      this.gridSize = 5;
+      this.winCondition = 4;
     } else if (
       type === BoardType.Connect4x4 ||
       type === BoardType.Gravity4x4 ||
@@ -92,7 +101,8 @@ export class BoardModel {
     }
 
     if (type === BoardType.Obstacles4x4) {
-      this.initObstacles();
+      this.obstacles = obstacles || BoardModel.generateRandomObstacles4x4(2);
+      this.initObstacles(this.obstacles);
     }
   }
 
@@ -141,7 +151,7 @@ export class BoardModel {
 
   public isThreePlayers(): boolean {
     if (this.type === BoardType.Custom) return this.customRules?.playerCount === 3;
-    return this.type === BoardType.ThreePlayers3x3;
+    return this.type === BoardType.ThreePlayers3x3 || this.type === BoardType.ThreePlayers5x5;
   }
 
   public isPowers(): boolean {
@@ -173,6 +183,21 @@ export class BoardModel {
     { x: 3, y: 3, z: 0, w: 0 },
   ];
 
+  public static generateRandomObstacles4x4(count: number = 2): Vector4i[] {
+    const obstacles: Vector4i[] = [];
+    const usedIndices = new Set<number>();
+    while (obstacles.length < count) {
+      const idx = Math.floor(Math.random() * 16);
+      if (!usedIndices.has(idx)) {
+        usedIndices.add(idx);
+        const r = idx % 4;
+        const c = Math.floor(idx / 4);
+        obstacles.push({ x: r, y: c, z: 0, w: 0 });
+      }
+    }
+    return obstacles;
+  }
+
   public isCellBlocked(pos: Vector4i): boolean {
     return this.getCell(pos) === '#';
   }
@@ -199,8 +224,8 @@ export class BoardModel {
 
   public getPieces(symbol: CellSymbol): Vector4i[] {
     const pieces: Vector4i[] = [];
-    for (let r = 0; r < 3; ++r) {
-      for (let c = 0; c < 3; ++c) {
+    for (let r = 0; r < this.gridSize; ++r) {
+      for (let c = 0; c < this.gridSize; ++c) {
         if (this.cells[r + c * 5] === symbol) {
           pieces.push({ x: r, y: c, z: 0, w: 0 });
         }
@@ -389,7 +414,7 @@ export class BoardModel {
       this.pieceQueues = { X: [], O: [] };
     }
     if (this.type === BoardType.Obstacles4x4) {
-      this.initObstacles();
+      this.initObstacles(this.obstacles);
     }
   }
 
@@ -725,10 +750,6 @@ export class BoardModel {
   }
 
   public undoMove(pos: Vector4i): void {
-    if (this.isPowers()) {
-      if (this.undoPower()) return;
-    }
-
     if (this.isMovement()) {
       const prev = this.undoStack.pop();
       if (prev) {
@@ -791,7 +812,6 @@ export class BoardModel {
     if (
       this.type === BoardType.TicTacToe3x3 ||
       this.type === BoardType.ThreePlayers3x3 ||
-      this.type === BoardType.Powers3x3 ||
       this.type === BoardType.Misere3x3 ||
       this.type === BoardType.TimeAttack3x3
     )
@@ -802,7 +822,13 @@ export class BoardModel {
       this.type === BoardType.Obstacles4x4
     )
       return this.occupiedCount >= 16;
-    if (this.type === BoardType.Connect5x5) return this.occupiedCount >= 25;
+    if (
+      this.type === BoardType.Connect5x5 ||
+      this.type === BoardType.Powers3x3 ||
+      this.type === BoardType.ThreePlayers5x5
+    ) {
+      return this.occupiedCount >= 25;
+    }
     if (this.type === BoardType.TicTacToe3D) return this.occupiedCount >= 27;
     if (this.type === BoardType.TicTacToe4x4_3D) return this.occupiedCount >= 64;
     if (this.type === BoardType.TicTacToe4D) return this.occupiedCount >= 81;
@@ -958,6 +984,9 @@ export class BoardModel {
         X: [...this.pieceQueues.X],
         O: [...this.pieceQueues.O],
       };
+    }
+    if (this.type === BoardType.Obstacles4x4 && this.obstacles) {
+      copy.obstacles = [...this.obstacles];
     }
     if (this.type === BoardType.Movement3x3 || this.type === BoardType.Powers3x3) {
       copy.undoStack = [...this.undoStack];

@@ -128,6 +128,61 @@ function generateWinningLines5x5(): Vector4i[][] {
   return lines;
 }
 
+// 2.2 Líneas 5x5 con 4 en Raya (28 líneas)
+function generateWinningLines5x5Win4(): Vector4i[][] {
+  const lines: Vector4i[][] = [];
+
+  // Filas (5 filas x 2 ventanas = 10 líneas)
+  for (let r = 0; r < 5; ++r) {
+    for (let c = 0; c <= 1; ++c) {
+      lines.push([
+        { x: r, y: c, z: 0, w: 0 },
+        { x: r, y: c + 1, z: 0, w: 0 },
+        { x: r, y: c + 2, z: 0, w: 0 },
+        { x: r, y: c + 3, z: 0, w: 0 },
+      ]);
+    }
+  }
+
+  // Columnas (5 columnas x 2 ventanas = 10 líneas)
+  for (let c = 0; c < 5; ++c) {
+    for (let r = 0; r <= 1; ++r) {
+      lines.push([
+        { x: r, y: c, z: 0, w: 0 },
+        { x: r + 1, y: c, z: 0, w: 0 },
+        { x: r + 2, y: c, z: 0, w: 0 },
+        { x: r + 3, y: c, z: 0, w: 0 },
+      ]);
+    }
+  }
+
+  // Diagonales principales (\): dr = 1, dc = 1 (4 líneas)
+  for (let r = 0; r <= 1; ++r) {
+    for (let c = 0; c <= 1; ++c) {
+      lines.push([
+        { x: r, y: c, z: 0, w: 0 },
+        { x: r + 1, y: c + 1, z: 0, w: 0 },
+        { x: r + 2, y: c + 2, z: 0, w: 0 },
+        { x: r + 3, y: c + 3, z: 0, w: 0 },
+      ]);
+    }
+  }
+
+  // Diagonales secundarias (/): dr = 1, dc = -1 (4 líneas)
+  for (let r = 0; r <= 1; ++r) {
+    for (let c = 3; c <= 4; ++c) {
+      lines.push([
+        { x: r, y: c, z: 0, w: 0 },
+        { x: r + 1, y: c - 1, z: 0, w: 0 },
+        { x: r + 2, y: c - 2, z: 0, w: 0 },
+        { x: r + 3, y: c - 3, z: 0, w: 0 },
+      ]);
+    }
+  }
+
+  return lines;
+}
+
 // 3. Líneas 3x3 en 3D / Qubic (Exactamente 49 líneas)
 function generateWinningLines3D(): Vector4i[][] {
   const lines: Vector4i[][] = [];
@@ -442,6 +497,7 @@ let cached3D: Vector4i[][] | null = null;
 let cached4D: Vector4i[][] | null = null;
 let cached4x4_3D: Vector4i[][] | null = null;
 let cached5x5: Vector4i[][] | null = null;
+let cached5x5Win4: Vector4i[][] | null = null;
 let cachedUltimate: Vector4i[][] | null = null;
 
 const cachedIndices: Partial<Record<BoardType, number[][]>> = {};
@@ -454,7 +510,6 @@ export function getWinningLines(type: BoardType): Vector4i[][] {
     case BoardType.Movement3x3:
     case BoardType.TimeAttack3x3:
     case BoardType.ThreePlayers3x3:
-    case BoardType.Powers3x3:
     default:
       if (!cached3x3) cached3x3 = generateWinningLines3x3();
       return cached3x3;
@@ -464,8 +519,12 @@ export function getWinningLines(type: BoardType): Vector4i[][] {
       if (!cached4x4) cached4x4 = generateWinningLines4x4();
       return cached4x4;
     case BoardType.Connect5x5:
+    case BoardType.Powers3x3:
       if (!cached5x5) cached5x5 = generateWinningLines5x5();
       return cached5x5;
+    case BoardType.ThreePlayers5x5:
+      if (!cached5x5Win4) cached5x5Win4 = generateWinningLines5x5Win4();
+      return cached5x5Win4;
     case BoardType.TicTacToe3D:
       if (!cached3D) cached3D = generateWinningLines3D();
       return cached3D;

@@ -56,8 +56,10 @@ export const PowerBar: React.FC<PowerBarProps> = ({
   onSelectPower,
   disabled = false,
 }) => {
-  const handlePress = (power: PowerType, used: boolean) => {
-    if (disabled || used) {
+  const hasUsed = !!powers.hasUsedPower;
+
+  const handlePress = (power: PowerType) => {
+    if (disabled || hasUsed) {
       HapticService.warning();
       return;
     }
@@ -75,41 +77,57 @@ export const PowerBar: React.FC<PowerBarProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>HABILIDADES TÁCTICAS (1 USO C/U)</Text>
+      <Text style={[styles.sectionTitle, hasUsed && styles.sectionTitleUsed]}>
+        {hasUsed ? 'HABILIDAD USADA (1 POR PARTIDA)' : 'HABILIDADES TÁCTICAS (1 USO POR PARTIDA)'}
+      </Text>
 
       <View style={styles.buttonsRow}>
         {POWER_DEFS.map((p) => {
-          const used = p.isUsed(powers);
+          const isThisPowerUsed = powers.usedPower === p.type;
+          const isBlocked = hasUsed && !isThisPowerUsed;
+          const isButtonDisabled = disabled || hasUsed;
           const isSelected = activePower === p.type;
 
           return (
             <Pressable
               key={p.type}
-              disabled={disabled || used}
-              onPress={() => handlePress(p.type, used)}
+              disabled={isButtonDisabled}
+              onPress={() => handlePress(p.type)}
               style={({ pressed }) => [
                 styles.powerBtn,
-                used && styles.powerBtnUsed,
+                (isThisPowerUsed || isBlocked) && styles.powerBtnUsed,
                 isSelected && styles.powerBtnSelected,
-                pressed && !used && styles.powerBtnPressed,
+                pressed && !isButtonDisabled && styles.powerBtnPressed,
               ]}
-              accessibilityLabel={`${p.name}: ${used ? 'Agotado' : 'Disponible'}`}
+              accessibilityLabel={`${p.name}: ${
+                isThisPowerUsed ? 'Usado' : isBlocked ? 'Bloqueado' : 'Disponible'
+              }`}
             >
-              <Text style={[styles.iconText, used && styles.iconUsed]}>
+              <Text
+                style={[
+                  styles.iconText,
+                  (isThisPowerUsed || isBlocked) && styles.iconUsed,
+                ]}
+              >
                 {p.icon}
               </Text>
               <Text
                 style={[
                   styles.powerName,
-                  used && styles.textUsed,
+                  (isThisPowerUsed || isBlocked) && styles.textUsed,
                   isSelected && styles.textSelected,
                 ]}
               >
                 {p.name}
               </Text>
-              {used && (
-                <View style={styles.usedBadge}>
+              {isThisPowerUsed && (
+                <View style={[styles.usedBadge, styles.usedBadgeActive]}>
                   <Text style={styles.usedBadgeText}>USADO</Text>
+                </View>
+              )}
+              {isBlocked && (
+                <View style={styles.usedBadge}>
+                  <Text style={styles.usedBadgeText}>BLOQUEADO</Text>
                 </View>
               )}
             </Pressable>
@@ -118,7 +136,7 @@ export const PowerBar: React.FC<PowerBarProps> = ({
       </View>
 
       {/* Mensaje instructivo del poder activo */}
-      {activeDef && (
+      {activeDef && !hasUsed && (
         <View style={styles.instructionBanner}>
           <Text style={styles.instructionText}>
             {activeDef.icon} {activeDef.desc} (Toca de nuevo para cancelar)
@@ -196,6 +214,9 @@ const styles = StyleSheet.create({
   textSelected: {
     color: Colors.accentPink,
   },
+  sectionTitleUsed: {
+    color: '#94a3b8',
+  },
   usedBadge: {
     position: 'absolute',
     top: 2,
@@ -204,6 +225,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 3,
     paddingVertical: 1,
+  },
+  usedBadgeActive: {
+    backgroundColor: 'rgba(244, 63, 94, 0.4)',
+    borderColor: '#f43f5e',
+    borderWidth: 0.5,
   },
   usedBadgeText: {
     fontSize: 7,

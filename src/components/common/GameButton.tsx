@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, Pressable, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, Pressable, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { HapticService } from '../../services/HapticService';
 import { AudioService } from '../../services/AudioService';
@@ -10,8 +10,8 @@ interface GameButtonProps {
   variant?: 'primary' | 'secondary' | 'accent' | 'danger' | 'outline';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   icon?: React.ReactNode;
   active?: boolean;
   accessibilityLabel?: string;

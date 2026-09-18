@@ -7,7 +7,7 @@ describe('MinimaxObstacles (IA para 4x4 con Obstáculos)', () => {
   let board: BoardModel;
 
   beforeEach(() => {
-    board = new BoardModel(BoardType.Obstacles4x4);
+    board = new BoardModel(BoardType.Obstacles4x4, undefined, BoardModel.DEFAULT_OBSTACLES);
   });
 
   test('IA encuentra victoria inmediata en fila libre de obstáculos', () => {

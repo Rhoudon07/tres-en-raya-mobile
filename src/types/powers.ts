@@ -12,6 +12,8 @@ export interface PlayerPowers {
   doubleTurnUsed: boolean;
   blockCellUsed: boolean;
   swapUsed: boolean;
+  hasUsedPower: boolean;
+  usedPower: PowerType | null;
 }
 
 export function createInitialPlayerPowers(): PlayerPowers {
@@ -20,6 +22,19 @@ export function createInitialPlayerPowers(): PlayerPowers {
     doubleTurnUsed: false,
     blockCellUsed: false,
     swapUsed: false,
+    hasUsedPower: false,
+    usedPower: null,
+  };
+}
+
+export function markPlayerPowerUsed(p: PlayerPowers, power: PowerType): PlayerPowers {
+  return {
+    bombUsed: true,
+    doubleTurnUsed: true,
+    blockCellUsed: true,
+    swapUsed: true,
+    hasUsedPower: true,
+    usedPower: power,
   };
 }
 

@@ -99,7 +99,7 @@ export const Cell2D: React.FC<Cell2DProps> = ({
             ? 'rgba(245, 158, 11, 0.15)'
             : isDestination
             ? 'rgba(6, 182, 212, 0.12)'
-            : pressed && symbol === ' '
+            : pressed && (symbol === ' ' || isSelectable)
             ? Colors.cellHover
             : Colors.cellNormal,
           borderColor: symbol === '#'

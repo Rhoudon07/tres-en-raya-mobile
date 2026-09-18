@@ -1,5 +1,6 @@
 import { BoardType } from '../../types/board';
 import { PuzzleDef } from '../../types/puzzle';
+import { BoardModel } from '../board/BoardModel';
 
 export const PUZZLE_CATALOG: PuzzleDef[] = [
   {
@@ -68,6 +69,7 @@ export const PUZZLE_CATALOG: PuzzleDef[] = [
     ],
     targetMove: { x: 1, y: 3, z: 0, w: 0 },
     explanation: '¡Completas la fila 1 limpia de 4 en raya evitando las esquinas bloqueadas!',
+    obstacles: BoardModel.DEFAULT_OBSTACLES,
   },
   {
     id: 'puz-5',

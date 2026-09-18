@@ -14,6 +14,7 @@ import { Board3D } from '../components/board/Board3D';
 import { Board4D } from '../components/board/Board4D';
 import { BoardUltimate } from '../components/board/BoardUltimate';
 import { ResultModal } from '../components/game/ResultModal';
+import { ExitConfirmModal } from '../components/common/ExitConfirmModal';
 import { GameTimer } from '../components/game/GameTimer';
 import { GameButton } from '../components/common/GameButton';
 import { PowerBar } from '../components/board/PowerBar';
@@ -41,6 +42,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   const restartCurrentGame = useGameStore((state) => state.restartCurrentGame);
   const playerPowers = useGameStore((state) => state.playerPowers);
   const activePower = useGameStore((state) => state.activePower);
+  const powerTargetFirst = useGameStore((state) => state.powerTargetFirst);
+  const doubleTurnRemaining = useGameStore((state) => state.doubleTurnRemaining);
   const selectPower = useGameStore((state) => state.selectPower);
 
   const soundEnabled = useSettingsStore((state) => state.soundEnabled);
@@ -53,6 +56,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   const completeCampaignLevel = useCampaignStore((state) => state.completeLevel);
 
   const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [exitModalVisible, setExitModalVisible] = useState(false);
   const [earnedStars, setEarnedStars] = useState<number | undefined>(undefined);
 
   // Sincronizar visibilidad del modal de resultado y evaluar progresión de campaña
@@ -105,22 +109,40 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
     }
   }, [gameOver]);
 
+  const handleExitGame = () => {
+    if (gameOver) {
+      if (activeCampaignLevelId !== null) {
+        navigation.navigate('Campaign');
+      } else {
+        navigation.navigate('Home');
+      }
+      return;
+    }
+    setExitModalVisible(true);
+  };
+
   // Manejo del botón 'ir atrás' de Android:
+  // - Si el modal de salida está abierto, lo cierra.
   // - Si el modal de resultado está abierto, lo cierra.
-  // - Si no hay modal abierto, bloquea el botón para forzar navegación por los botones de la pantalla.
+  // - Si no hay modal abierto, consulta al usuario con el modal temático si desea salir.
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
+        if (exitModalVisible) {
+          setExitModalVisible(false);
+          return true;
+        }
         if (resultModalVisible) {
           setResultModalVisible(false);
           return true;
         }
+        handleExitGame();
         return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [resultModalVisible])
+    }, [exitModalVisible, resultModalVisible, gameOver, activeCampaignLevelId])
   );
 
   const handleCellPress = (pos: any) => {
@@ -142,6 +164,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
       case BoardType.TimeAttack3x3:
       case BoardType.Obstacles4x4:
       case BoardType.ThreePlayers3x3:
+      case BoardType.ThreePlayers5x5:
       case BoardType.Powers3x3:
       case BoardType.Custom:
         return (
@@ -151,6 +174,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
             winningLine={winningLine}
             currentTurn={currentTurn}
             selectedPiece={selectedPiece}
+            activePower={activePower}
+            powerTargetFirst={powerTargetFirst}
             disabled={isCpuThinking || gameOver}
           />
         );
@@ -221,6 +246,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
               style={styles.iconBtn}
               accessibilityLabel="Reiniciar partida"
             />
+            <GameButton
+              title="✕"
+              size="small"
+              variant="outline"
+              onPress={handleExitGame}
+              style={[styles.iconBtn, styles.exitBtn]}
+              accessibilityLabel="Salir de la partida"
+            />
           </View>
         </View>
 
@@ -255,6 +288,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
                 : selectedPiece
                 ? `✨ Ficha seleccionada: Toca una casilla adyacente libre`
                 : `👆 Tu turno: Selecciona una de tus fichas (${currentTurn}) para moverla`}
+            </Text>
+          </View>
+        )}
+
+        {/* Indicador de Doble Turno Activo en Modo Poderes */}
+        {boardType === BoardType.Powers3x3 && !gameOver && doubleTurnRemaining > 0 && (
+          <View style={[styles.movementPhaseBanner, { borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
+            <Text style={[styles.movementPhaseText, { color: '#fb7185' }]}>
+              🔄 ¡Doble Turno activo! Coloca tu 2ª ficha consecutiva ({currentTurn})
             </Text>
           </View>
         )}
@@ -316,16 +358,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
                 style={styles.bottomBtn}
               />
               <GameButton
-                title={activeCampaignLevelId !== null ? 'VOLVER AL MAPA' : 'CAMBIAR MODO'}
+                title="SALIR DE PARTIDA"
                 variant="outline"
                 size="small"
-                onPress={() => {
-                  if (activeCampaignLevelId !== null) {
-                    navigation.navigate('Campaign');
-                  } else {
-                    navigation.navigate('BoardSelect');
-                  }
-                }}
+                onPress={handleExitGame}
                 style={styles.bottomBtn}
               />
             </View>
@@ -342,6 +378,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
             ? board.getCell(winningLine[0])
             : resultMessage.includes('Empate')
             ? 'D'
+            : resultMessage.includes('X')
+            ? 'X'
+            : resultMessage.includes('O')
+            ? 'O'
+            : resultMessage.includes('Y')
+            ? 'Y'
             : ' '
         }
         campaignStars={activeCampaignLevelId !== null ? earnedStars : undefined}
@@ -368,6 +410,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
             routes: [{ name: 'Home' }],
           });
         }}
+      />
+
+      {/* Modal temático para salir de la partida */}
+      <ExitConfirmModal
+        visible={exitModalVisible}
+        title="¿ABANDONAR PARTIDA?"
+        message="¿Deseas salir al menú principal? La partida actual se dará por abandonada."
+        confirmText="SALIR"
+        cancelText="CONTINUAR"
+        icon="⚔️"
+        onConfirm={() => {
+          setExitModalVisible(false);
+          if (activeCampaignLevelId !== null) {
+            navigation.navigate('Campaign');
+          } else {
+            navigation.navigate('Home');
+          }
+        }}
+        onCancel={() => setExitModalVisible(false)}
       />
     </SafeAreaView>
   );
@@ -401,6 +462,10 @@ const styles = StyleSheet.create({
     height: 40,
     paddingHorizontal: 0,
     marginLeft: 6,
+  },
+  exitBtn: {
+    borderColor: 'rgba(244, 63, 94, 0.4)',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
   },
   boardContainer: {
     marginVertical: 4,

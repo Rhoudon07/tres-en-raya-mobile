@@ -56,6 +56,7 @@ export class AIEngine {
       case BoardType.Obstacles4x4:
         return getBestMoveObstacles(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.ThreePlayers3x3:
+      case BoardType.ThreePlayers5x5:
         return getBestMoveThreePlayers(board, aiSymbol, difficulty);
       case BoardType.Powers3x3:
         return getBestMovePowers(board, aiSymbol, humanSymbol, difficulty);
