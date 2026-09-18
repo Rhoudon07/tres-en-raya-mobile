@@ -15,6 +15,9 @@ interface ResultModalProps {
   onReturnToCampaign?: () => void;
 }
 
+export { formatResultMessage } from '../../utils/resultMessageHelper';
+import { formatResultMessage } from '../../utils/resultMessageHelper';
+
 export const ResultModal: React.FC<ResultModalProps> = ({
   visible,
   resultMessage,
@@ -51,7 +54,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
   if (!visible) return null;
 
-  const isDefeat = resultMessage.includes('Derrota');
+  const isDefeat = resultMessage.includes('Derrota') || resultMessage.toLowerCase().includes('cpu');
 
   const getHeaderColor = () => {
     if (isDefeat) return Colors.playerO;
@@ -62,6 +65,8 @@ export const ResultModal: React.FC<ResultModalProps> = ({
     return Colors.textPrimary;
   };
 
+  const displayMessage = formatResultMessage(resultMessage, winner);
+
   return (
     <Animated.View style={[styles.overlayContainer, { opacity: fadeAnim }]} pointerEvents="auto">
       <View style={styles.backdrop}>
@@ -70,7 +75,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             {winner === 'D' ? 'EMPATE' : isDefeat ? 'DERROTA' : '¡VICTORIA!'}
           </Text>
 
-          <Text style={styles.message}>{resultMessage}</Text>
+          <Text style={styles.message}>{displayMessage}</Text>
 
           {campaignStars !== undefined && (
             <View style={styles.campaignStarsRow}>

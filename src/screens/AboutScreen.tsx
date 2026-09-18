@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { GameCard } from '../components/common/GameCard';
@@ -17,6 +17,12 @@ export const AboutScreen: React.FC<AboutScreenProps> = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.appLogo}
+            resizeMode="contain"
+            accessibilityLabel="Logotipo oficial Tres en Raya"
+          />
           <Text style={styles.title}>ACERCA DEL JUEGO</Text>
           <Text style={styles.subtitle}>Tres en Raya: Dimensiones Cuánticas</Text>
         </View>
@@ -217,7 +223,19 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginVertical: 14,
+    marginBottom: 20,
+  },
+  appLogo: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(56, 189, 248, 0.4)',
+    shadowColor: Colors.accentCyan,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
   },
   title: {
     fontSize: 22,

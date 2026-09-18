@@ -9,6 +9,7 @@ import { Difficulty } from '../src/types/ai';
 import { getWinningLines } from '../src/game/board/WinningLines';
 import { useGameStore } from '../src/stores/useGameStore';
 import { GameMode, PlayerTurnOrder } from '../src/types/game';
+import { formatResultMessage } from '../src/utils/resultMessageHelper';
 
 describe('Modalidad Tres Jugadores (ThreePlayers3x3)', () => {
   test('Inicialización correcta del tablero', () => {
@@ -203,5 +204,22 @@ describe('Modalidad Tres Jugadores 5x5 Simultáneo (ThreePlayers5x5 con 4 en Ray
     const state = useGameStore.getState();
     expect(state.gameOver).toBe(true);
     expect(state.resultMessage).toBe('¡Victoria para X!');
+  });
+
+  test('ResultModal formatResultMessage: Detalla victoria de CPU y la ficha con la que ganó', () => {
+    // Victoria estándar de CPU con ficha O
+    expect(formatResultMessage('Derrota', 'O')).toBe('Ha ganado la CPU con la ficha O');
+    // Victoria estándar de CPU con ficha X
+    expect(formatResultMessage('Derrota', 'X')).toBe('Ha ganado la CPU con la ficha X');
+    // Victoria estándar de CPU con ficha Y
+    expect(formatResultMessage('Derrota', 'Y')).toBe('Ha ganado la CPU con la ficha Y');
+    // Victoria por inmovilización
+    expect(formatResultMessage('Derrota (Inmovilizado)', 'O')).toBe('Ha ganado la CPU con la ficha O (Por inmovilización)');
+    // Victoria por tiempo
+    expect(formatResultMessage('Derrota (Por tiempo)', 'X')).toBe('Ha ganado la CPU con la ficha X (Por tiempo)');
+    // Partida no derrota (PvP o victoria de jugador humano)
+    expect(formatResultMessage('¡Victoria! Has ganado', 'X')).toBe('¡Victoria! Has ganado');
+    expect(formatResultMessage('¡Victoria para X!', 'X')).toBe('¡Victoria para X!');
+    expect(formatResultMessage('¡Empate!', 'D')).toBe('¡Empate!');
   });
 });

@@ -41,41 +41,210 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }, [exitModalVisible])
   );
 
-  // Animación suave de partículas decorativas de fondo
-  const floatAnim1 = useSharedValue(0);
-  const floatAnim2 = useSharedValue(0);
+  // --- Animaciones de Fondo Dinámico Neón (Reanimated UI-Thread) ---
+  // 1. Orbe Cian (Jugador X)
+  const orbCyanY = useSharedValue(0);
+  const orbCyanX = useSharedValue(0);
+  const orbCyanScale = useSharedValue(0.9);
+  const orbCyanOpacity = useSharedValue(0.12);
+
+  // 2. Orbe Rosa (Jugador O)
+  const orbPinkY = useSharedValue(0);
+  const orbPinkX = useSharedValue(0);
+  const orbPinkScale = useSharedValue(0.95);
+  const orbPinkOpacity = useSharedValue(0.10);
+
+  // 3. Anillo de pulso cuántico expansivo
+  const pulseWave = useSharedValue(0);
+
+  // 4. Fichas cósmicas flotantes y en rotación continua
+  const rotX1 = useSharedValue(0);
+  const floatX1 = useSharedValue(0);
+
+  const rotO1 = useSharedValue(0);
+  const floatO1 = useSharedValue(0);
+
+  const floatO2 = useSharedValue(0);
+  const floatX2 = useSharedValue(0);
+  const floatY = useSharedValue(0);
 
   useEffect(() => {
     loadSettings();
     loadStats();
 
-    floatAnim1.value = withRepeat(
-      withTiming(20, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
+    // 1. Orbe Cian
+    orbCyanY.value = withRepeat(
+      withTiming(30, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
       -1,
       true
     );
-    floatAnim2.value = withRepeat(
-      withTiming(-20, { duration: 3200, easing: Easing.inOut(Easing.ease) }),
+    orbCyanX.value = withRepeat(
+      withTiming(20, { duration: 5200, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+    orbCyanScale.value = withRepeat(
+      withTiming(1.3, { duration: 3400, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+    orbCyanOpacity.value = withRepeat(
+      withTiming(0.24, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+
+    // 2. Orbe Rosa
+    orbPinkY.value = withRepeat(
+      withTiming(-35, { duration: 4600, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+    orbPinkX.value = withRepeat(
+      withTiming(-25, { duration: 5800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+    orbPinkScale.value = withRepeat(
+      withTiming(1.25, { duration: 3800, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+    orbPinkOpacity.value = withRepeat(
+      withTiming(0.22, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+
+    // 3. Anillo de pulso cuántico central
+    pulseWave.value = withRepeat(
+      withTiming(1, { duration: 3600, easing: Easing.out(Easing.ease) }),
+      -1,
+      false
+    );
+
+    // 4. Fichas cósmicas
+    rotX1.value = withRepeat(
+      withTiming(360, { duration: 26000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    floatX1.value = withRepeat(
+      withTiming(25, { duration: 3200, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+
+    rotO1.value = withRepeat(
+      withTiming(-360, { duration: 30000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    floatO1.value = withRepeat(
+      withTiming(-25, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+
+    floatO2.value = withRepeat(
+      withTiming(18, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+
+    floatX2.value = withRepeat(
+      withTiming(-16, { duration: 3400, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true
+    );
+
+    floatY.value = withRepeat(
+      withTiming(14, { duration: 4200, easing: Easing.inOut(Easing.sin) }),
       -1,
       true
     );
   }, []);
 
-  const styleX = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatAnim1.value }, { rotate: `${floatAnim1.value * 0.5}deg` }],
+  const styleOrbCyan = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orbCyanY.value },
+      { translateX: orbCyanX.value },
+      { scale: orbCyanScale.value },
+    ],
+    opacity: orbCyanOpacity.value,
   }));
 
-  const styleO = useAnimatedStyle(() => ({
-    transform: [{ translateY: floatAnim2.value }, { rotate: `${floatAnim2.value * -0.5}deg` }],
+  const styleOrbPink = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: orbPinkY.value },
+      { translateX: orbPinkX.value },
+      { scale: orbPinkScale.value },
+    ],
+    opacity: orbPinkOpacity.value,
+  }));
+
+  const stylePulseRing = useAnimatedStyle(() => ({
+    transform: [{ scale: 0.5 + pulseWave.value * 1.5 }],
+    opacity: (1 - pulseWave.value) * 0.28,
+  }));
+
+  const styleX1 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: floatX1.value },
+      { rotate: `${rotX1.value}deg` },
+    ],
+  }));
+
+  const styleO1 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: floatO1.value },
+      { rotate: `${rotO1.value}deg` },
+    ],
+  }));
+
+  const styleO2 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: floatO2.value },
+      { rotate: `${floatO2.value * 0.8}deg` },
+    ],
+  }));
+
+  const styleX2 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: floatX2.value },
+      { rotate: `${floatX2.value * -0.7}deg` },
+    ],
+  }));
+
+  const styleY = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: floatY.value },
+      { scale: 1 + (floatY.value / 14) * 0.1 },
+    ],
   }));
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
-      {/* Decoraciones animadas de fondo */}
-      <Animated.Text style={[styles.bgDecorX, styleX]}>X</Animated.Text>
-      <Animated.Text style={[styles.bgDecorO, styleO]}>O</Animated.Text>
+      {/* Contenedor de fondo animado (sin bloquear eventos táctiles) */}
+      <View style={styles.animatedBgContainer} pointerEvents="none">
+        {/* Orbe resplandeciente Cian (Jugador X) */}
+        <Animated.View style={[styles.bgGlowCyan, styleOrbCyan]} />
+
+        {/* Orbe resplandeciente Rosa (Jugador O) */}
+        <Animated.View style={[styles.bgGlowPink, styleOrbPink]} />
+
+        {/* Anillo de pulso cuántico expansivo */}
+        <Animated.View style={[styles.bgPulseRing, stylePulseRing]} />
+
+        {/* Fichas cósmicas flotantes y en rotación continua */}
+        <Animated.Text style={[styles.bgDecorBigX, styleX1]}>X</Animated.Text>
+        <Animated.Text style={[styles.bgDecorBigO, styleO1]}>O</Animated.Text>
+        <Animated.Text style={[styles.bgDecorMidO, styleO2]}>O</Animated.Text>
+        <Animated.Text style={[styles.bgDecorMidX, styleX2]}>X</Animated.Text>
+        <Animated.Text style={[styles.bgDecorSmallY, styleY]}>Y</Animated.Text>
+      </View>
 
       <View style={styles.content}>
         {/* Cabecera / Título */}
@@ -135,7 +304,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <GameButton
             title="ACERCA DE"
             size="medium"
-            variant="outline"
+            variant="secondary"
             onPress={() => navigation.navigate('About')}
           />
         </View>
@@ -160,6 +329,15 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  animatedBgContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+    zIndex: 1,
   },
   content: {
     flex: 1,
@@ -210,24 +388,80 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.8,
   },
-  bgDecorX: {
+  // Fondos y decoraciones animadas
+  bgGlowCyan: {
     position: 'absolute',
-    top: 90,
-    left: 20,
-    fontSize: 120,
+    top: -60,
+    left: -60,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: Colors.accentCyan,
+  },
+  bgGlowPink: {
+    position: 'absolute',
+    bottom: -80,
+    right: -60,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: Colors.accentPink,
+  },
+  bgPulseRing: {
+    position: 'absolute',
+    top: '38%',
+    left: '50%',
+    width: 280,
+    height: 280,
+    marginLeft: -140,
+    marginTop: -140,
+    borderRadius: 140,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 212, 255, 0.4)',
+  },
+  bgDecorBigX: {
+    position: 'absolute',
+    top: 60,
+    left: 10,
+    fontSize: 110,
     fontWeight: '900',
     color: Colors.playerX,
-    opacity: 0.04,
-    zIndex: 1,
+    opacity: 0.08,
   },
-  bgDecorO: {
+  bgDecorBigO: {
     position: 'absolute',
-    bottom: 110,
-    right: 20,
-    fontSize: 140,
+    bottom: 90,
+    right: 10,
+    fontSize: 130,
     fontWeight: '900',
     color: Colors.playerO,
-    opacity: 0.04,
-    zIndex: 1,
+    opacity: 0.08,
+  },
+  bgDecorMidO: {
+    position: 'absolute',
+    top: 140,
+    right: 24,
+    fontSize: 64,
+    fontWeight: '900',
+    color: Colors.playerO,
+    opacity: 0.07,
+  },
+  bgDecorMidX: {
+    position: 'absolute',
+    bottom: 220,
+    left: 20,
+    fontSize: 58,
+    fontWeight: '900',
+    color: Colors.playerX,
+    opacity: 0.07,
+  },
+  bgDecorSmallY: {
+    position: 'absolute',
+    top: '48%',
+    right: 32,
+    fontSize: 44,
+    fontWeight: '900',
+    color: Colors.playerY,
+    opacity: 0.06,
   },
 });

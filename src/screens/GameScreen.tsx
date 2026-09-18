@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import { BoardType } from '../types/board';
+import { GameMode, PlayerTurnOrder } from '../types/game';
 import { useGameStore } from '../stores/useGameStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { ScoreBoard } from '../components/game/ScoreBoard';
@@ -30,6 +31,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   const boardType = useGameStore((state) => state.boardType);
   const board = useGameStore((state) => state.board);
   const mode = useGameStore((state) => state.mode);
+  const turnOrder = useGameStore((state) => state.turnOrder);
   const currentTurn = useGameStore((state) => state.currentTurn);
   const score = useGameStore((state) => state.score);
   const isCpuThinking = useGameStore((state) => state.isCpuThinking);
@@ -376,6 +378,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
         winner={
           winningLine && winningLine.length > 0
             ? board.getCell(winningLine[0])
+            : board.checkWinner().winner !== ' '
+            ? board.checkWinner().winner
             : resultMessage.includes('Empate')
             ? 'D'
             : resultMessage.includes('X')
@@ -384,6 +388,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
             ? 'O'
             : resultMessage.includes('Y')
             ? 'Y'
+            : mode === GameMode.PvCPU && resultMessage.includes('Derrota')
+            ? (turnOrder === PlayerTurnOrder.First ? 'O' : 'X')
             : ' '
         }
         campaignStars={activeCampaignLevelId !== null ? earnedStars : undefined}

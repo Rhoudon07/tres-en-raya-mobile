@@ -51,7 +51,7 @@ export const GameButton: React.FC<GameButtonProps> = ({
       case 'secondary':
         return Colors.boardSurface;
       case 'outline':
-        return 'transparent';
+        return Colors.background;
     }
   };
 
