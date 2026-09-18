@@ -26,6 +26,7 @@ export enum PlayerTurnOrder {
 export interface Score {
   xWins: number;
   oWins: number;
+  yWins?: number;
   draws: number;
 }
 
@@ -33,6 +34,7 @@ export interface ModeStats {
   played: number;
   xWins: number;
   oWins: number;
+  yWins?: number;
   draws: number;
   totalAccuracy: number;
   accuracyCount: number;

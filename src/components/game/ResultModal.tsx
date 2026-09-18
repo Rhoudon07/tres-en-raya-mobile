@@ -8,18 +8,22 @@ interface ResultModalProps {
   visible: boolean;
   resultMessage: string;
   winner: CellSymbol | 'D';
+  campaignStars?: number;
   onPlayAgain: () => void;
   onAnalyze: () => void;
   onReturnToMenu: () => void;
+  onReturnToCampaign?: () => void;
 }
 
 export const ResultModal: React.FC<ResultModalProps> = ({
   visible,
   resultMessage,
   winner,
+  campaignStars,
   onPlayAgain,
   onAnalyze,
   onReturnToMenu,
+  onReturnToCampaign,
 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
@@ -64,10 +68,38 @@ export const ResultModal: React.FC<ResultModalProps> = ({
 
           <Text style={styles.message}>{resultMessage}</Text>
 
+          {campaignStars !== undefined && (
+            <View style={styles.campaignStarsRow}>
+              {[1, 2, 3].map((star) => (
+                <Text
+                  key={star}
+                  style={[
+                    styles.campaignStarIcon,
+                    star <= campaignStars && styles.campaignStarFilled,
+                  ]}
+                >
+                  ★
+                </Text>
+              ))}
+              <Text style={styles.campaignStarsLabel}>
+                {campaignStars} de 3 Estrellas
+              </Text>
+            </View>
+          )}
+
           <View style={styles.actions}>
+            {onReturnToCampaign && (
+              <GameButton
+                title="VOLVER A LA CAMPAÑA"
+                variant="accent"
+                size="medium"
+                onPress={onReturnToCampaign}
+              />
+            )}
+
             <GameButton
               title="JUGAR OTRA VEZ"
-              variant="accent"
+              variant={onReturnToCampaign ? 'secondary' : 'accent'}
               size="medium"
               onPress={onPlayAgain}
             />
@@ -139,9 +171,36 @@ const styles = StyleSheet.create({
   },
   actions: {
     width: '100%',
+    gap: 8,
   },
   analyzeBtn: {
     borderColor: Colors.reviewBest,
     backgroundColor: '#162e24',
+  },
+  campaignStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  campaignStarIcon: {
+    fontSize: 22,
+    color: Colors.boardBorder,
+    marginHorizontal: 3,
+  },
+  campaignStarFilled: {
+    color: '#fbbf24',
+  },
+  campaignStarsLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fbbf24',
+    marginLeft: 8,
   },
 });

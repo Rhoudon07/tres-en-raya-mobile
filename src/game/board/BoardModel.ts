@@ -1,5 +1,12 @@
 import { BoardType, CellSymbol, Vector4i, MovementMove } from '../../types/board';
-import { getWinningLines, getWinningLineIndices, coordToIndex } from './WinningLines';
+import {
+  getWinningLines,
+  getWinningLineIndices,
+  getWinningLinesForDimension,
+  getWinningLineIndicesForDimension,
+  coordToIndex,
+} from './WinningLines';
+import { CustomGameRules } from '../../types/lab';
 
 /**
  * Modelo de datos puro del tablero con alta optimización de rendimiento.
@@ -16,12 +23,21 @@ interface UndoEntry {
   movementTo?: Vector4i;
   movementPlacement?: Vector4i;
   movementSymbol?: CellSymbol;
+  powerType?: 'bomb' | 'block' | 'swap';
+  bombPos?: Vector4i;
+  bombPrevSymbol?: CellSymbol;
+  blockPos?: Vector4i;
+  swapPosA?: Vector4i;
+  swapSymbolA?: CellSymbol;
+  swapPosB?: Vector4i;
+  swapSymbolB?: CellSymbol;
 }
 
 export class BoardModel {
   public readonly type: BoardType;
   public readonly gridSize: number;
   public readonly winCondition: number;
+  public readonly customRules?: CustomGameRules;
 
   // Representación interna en array lineal plano de 300 elementos:
   // idx = x + y*5 + z*25 + w*100
@@ -37,8 +53,9 @@ export class BoardModel {
 
   private undoStack: UndoEntry[];
 
-  constructor(type: BoardType = BoardType.TicTacToe3x3) {
+  constructor(type: BoardType = BoardType.TicTacToe3x3, customRules?: CustomGameRules) {
     this.type = type;
+    this.customRules = customRules;
     this.cells = new Array(300).fill(' ');
     this.occupiedCount = 0;
     this.activeMacro = null;
@@ -46,7 +63,19 @@ export class BoardModel {
     this.pieceQueues = { X: [], O: [] };
     this.undoStack = [];
 
-    if (type === BoardType.Connect5x5) {
+    if (type === BoardType.Custom && customRules) {
+      if (customRules.dimension === '5x5') {
+        this.gridSize = 5;
+      } else if (customRules.dimension === '4x4') {
+        this.gridSize = 4;
+      } else {
+        this.gridSize = 3;
+      }
+      this.winCondition = customRules.winCondition;
+      if (customRules.obstacles > 0) {
+        this.initCustomObstacles(customRules.obstacles);
+      }
+    } else if (type === BoardType.Connect5x5) {
       this.gridSize = 5;
       this.winCondition = 5;
     } else if (
@@ -68,14 +97,17 @@ export class BoardModel {
   }
 
   public hasGravity(): boolean {
+    if (this.type === BoardType.Custom) return !!this.customRules?.gravity;
     return this.type === BoardType.Gravity4x4;
   }
 
   public is3D(): boolean {
+    if (this.type === BoardType.Custom) return this.customRules?.dimension === '3D';
     return this.type === BoardType.TicTacToe3D || this.type === BoardType.TicTacToe4x4_3D;
   }
 
   public is4D(): boolean {
+    if (this.type === BoardType.Custom) return this.customRules?.dimension === '4D';
     return this.type === BoardType.TicTacToe4D;
   }
 
@@ -84,10 +116,12 @@ export class BoardModel {
   }
 
   public isLimited(): boolean {
+    if (this.type === BoardType.Custom) return (this.customRules?.limitedPieces || 0) > 0;
     return this.type === BoardType.Limited3x3;
   }
 
   public isMisere(): boolean {
+    if (this.type === BoardType.Custom) return !!this.customRules?.misere;
     return this.type === BoardType.Misere3x3;
   }
 
@@ -96,11 +130,42 @@ export class BoardModel {
   }
 
   public isTimeAttack(): boolean {
+    if (this.type === BoardType.Custom) return (this.customRules?.turnTimer || 0) > 0;
     return this.type === BoardType.TimeAttack3x3;
   }
 
   public isObstacles(): boolean {
+    if (this.type === BoardType.Custom) return (this.customRules?.obstacles || 0) > 0;
     return this.type === BoardType.Obstacles4x4;
+  }
+
+  public isThreePlayers(): boolean {
+    if (this.type === BoardType.Custom) return this.customRules?.playerCount === 3;
+    return this.type === BoardType.ThreePlayers3x3;
+  }
+
+  public isPowers(): boolean {
+    return this.type === BoardType.Powers3x3;
+  }
+
+  public initCustomObstacles(count: number): void {
+    const fixedSpots: Vector4i[] = [
+      { x: 0, y: 1, z: 0, w: 0 },
+      { x: 2, y: 1, z: 0, w: 0 },
+      { x: 1, y: 0, z: 0, w: 0 },
+      { x: 1, y: 2, z: 0, w: 0 },
+      { x: 0, y: 0, z: 0, w: 0 },
+    ];
+    for (let i = 0; i < Math.min(count, fixedSpots.length); i++) {
+      const p = fixedSpots[i];
+      if (p.x < this.gridSize && p.y < this.gridSize) {
+        const idx = p.x + p.y * 5;
+        if (this.cells[idx] === ' ') {
+          this.cells[idx] = '#';
+          this.occupiedCount++;
+        }
+      }
+    }
   }
 
   public static readonly DEFAULT_OBSTACLES: Vector4i[] = [
@@ -229,6 +294,87 @@ export class BoardModel {
       return this.pieceQueues.O[0];
     }
     return null;
+  }
+
+  // --- MÉTODOS DE MODALIDAD PODERES ---
+
+  public clearCell(pos: Vector4i): boolean {
+    const idx = pos.x + pos.y * 5 + pos.z * 25 + pos.w * 100;
+    const current = this.cells[idx];
+    if (current === ' ' || current === '#') return false;
+
+    this.cells[idx] = ' ';
+    this.occupiedCount--;
+    this.undoStack.push({
+      powerType: 'bomb',
+      bombPos: pos,
+      bombPrevSymbol: current,
+    });
+    return true;
+  }
+
+  public setObstacleCell(pos: Vector4i): boolean {
+    const idx = pos.x + pos.y * 5 + pos.z * 25 + pos.w * 100;
+    if (this.cells[idx] !== ' ') return false;
+
+    this.cells[idx] = '#';
+    this.occupiedCount++;
+    this.undoStack.push({
+      powerType: 'block',
+      blockPos: pos,
+    });
+    return true;
+  }
+
+  public swapCells(posA: Vector4i, posB: Vector4i): boolean {
+    const idxA = posA.x + posA.y * 5 + posA.z * 25 + posA.w * 100;
+    const idxB = posB.x + posB.y * 5 + posB.z * 25 + posB.w * 100;
+    const symA = this.cells[idxA];
+    const symB = this.cells[idxB];
+
+    if (symA === ' ' || symA === '#' || symB === ' ' || symB === '#') return false;
+    if (symA === symB) return false;
+
+    this.cells[idxA] = symB;
+    this.cells[idxB] = symA;
+    this.undoStack.push({
+      powerType: 'swap',
+      swapPosA: posA,
+      swapSymbolA: symA,
+      swapPosB: posB,
+      swapSymbolB: symB,
+    });
+    return true;
+  }
+
+  public undoPower(): boolean {
+    const last = this.undoStack[this.undoStack.length - 1];
+    if (!last || !last.powerType) return false;
+    this.undoStack.pop();
+
+    if (last.powerType === 'bomb' && last.bombPos && last.bombPrevSymbol) {
+      const idx = last.bombPos.x + last.bombPos.y * 5 + last.bombPos.z * 25 + last.bombPos.w * 100;
+      this.cells[idx] = last.bombPrevSymbol;
+      this.occupiedCount++;
+      return true;
+    }
+
+    if (last.powerType === 'block' && last.blockPos) {
+      const idx = last.blockPos.x + last.blockPos.y * 5 + last.blockPos.z * 25 + last.blockPos.w * 100;
+      this.cells[idx] = ' ';
+      this.occupiedCount--;
+      return true;
+    }
+
+    if (last.powerType === 'swap' && last.swapPosA && last.swapPosB && last.swapSymbolA && last.swapSymbolB) {
+      const idxA = last.swapPosA.x + last.swapPosA.y * 5 + last.swapPosA.z * 25 + last.swapPosA.w * 100;
+      const idxB = last.swapPosB.x + last.swapPosB.y * 5 + last.swapPosB.z * 25 + last.swapPosB.w * 100;
+      this.cells[idxA] = last.swapSymbolA;
+      this.cells[idxB] = last.swapSymbolB;
+      return true;
+    }
+
+    return false;
   }
 
   public reset(): void {
@@ -579,6 +725,10 @@ export class BoardModel {
   }
 
   public undoMove(pos: Vector4i): void {
+    if (this.isPowers()) {
+      if (this.undoPower()) return;
+    }
+
     if (this.isMovement()) {
       const prev = this.undoStack.pop();
       if (prev) {
@@ -638,7 +788,14 @@ export class BoardModel {
   }
 
   public isFull(): boolean {
-    if (this.type === BoardType.TicTacToe3x3) return this.occupiedCount >= 9;
+    if (
+      this.type === BoardType.TicTacToe3x3 ||
+      this.type === BoardType.ThreePlayers3x3 ||
+      this.type === BoardType.Powers3x3 ||
+      this.type === BoardType.Misere3x3 ||
+      this.type === BoardType.TimeAttack3x3
+    )
+      return this.occupiedCount >= 9;
     if (
       this.type === BoardType.Connect4x4 ||
       this.type === BoardType.Gravity4x4 ||
@@ -654,8 +811,11 @@ export class BoardModel {
     }
     if (this.type === BoardType.Limited3x3) return false;
     if (this.type === BoardType.Movement3x3) return false;
-    if (this.type === BoardType.Misere3x3 || this.type === BoardType.TimeAttack3x3)
-      return this.occupiedCount >= 9;
+    if (this.type === BoardType.Custom) {
+      if (this.isLimited()) return false;
+      const total = this.is4D() ? 81 : this.is3D() ? 27 : this.gridSize * this.gridSize;
+      return this.occupiedCount >= total;
+    }
     return false;
   }
 
@@ -683,8 +843,14 @@ export class BoardModel {
 
   public checkWinner(): { winner: CellSymbol | 'D'; winningLine?: Vector4i[] } {
     if (this.isMisere()) {
-      const lines = getWinningLines(this.type);
-      const lineIndices = getWinningLineIndices(this.type);
+      const lines =
+        this.type === BoardType.Custom
+          ? getWinningLinesForDimension(this.customRules?.dimension || '3x3')
+          : getWinningLines(this.type);
+      const lineIndices =
+        this.type === BoardType.Custom
+          ? getWinningLineIndicesForDimension(this.customRules?.dimension || '3x3')
+          : getWinningLineIndices(this.type);
 
       for (let l = 0; l < lineIndices.length; ++l) {
         const idxs = lineIndices[l];
@@ -745,8 +911,14 @@ export class BoardModel {
       return { winner: ' ' };
     }
 
-    const lines = getWinningLines(this.type);
-    const lineIndices = getWinningLineIndices(this.type);
+    const lines =
+      this.type === BoardType.Custom
+        ? getWinningLinesForDimension(this.customRules?.dimension || '3x3')
+        : getWinningLines(this.type);
+    const lineIndices =
+      this.type === BoardType.Custom
+        ? getWinningLineIndicesForDimension(this.customRules?.dimension || '3x3')
+        : getWinningLineIndices(this.type);
 
     for (let l = 0; l < lineIndices.length; ++l) {
       const idxs = lineIndices[l];
@@ -774,7 +946,7 @@ export class BoardModel {
   }
 
   public clone(): BoardModel {
-    const copy = new BoardModel(this.type);
+    const copy = new BoardModel(this.type, this.customRules);
     copy.occupiedCount = this.occupiedCount;
     copy.cells = [...this.cells];
     if (this.type === BoardType.Ultimate) {
@@ -787,7 +959,7 @@ export class BoardModel {
         O: [...this.pieceQueues.O],
       };
     }
-    if (this.type === BoardType.Movement3x3) {
+    if (this.type === BoardType.Movement3x3 || this.type === BoardType.Powers3x3) {
       copy.undoStack = [...this.undoStack];
     }
     return copy;

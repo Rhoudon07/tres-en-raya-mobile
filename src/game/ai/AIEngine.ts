@@ -13,6 +13,8 @@ import { getBestMoveLimited } from './MinimaxLimited';
 import { getBestMoveMisere } from './MinimaxMisere';
 import { getBestPlacementMove, getBestPieceMove } from './MinimaxMovement';
 import { getBestMoveObstacles } from './MinimaxObstacles';
+import { getBestMoveThreePlayers } from './MinimaxThreePlayers';
+import { getBestMovePowers } from './MinimaxPowers';
 
 export class AIEngine {
   /**
@@ -53,6 +55,10 @@ export class AIEngine {
         return getBestMoveMisere(board, aiSymbol, humanSymbol, difficulty);
       case BoardType.Obstacles4x4:
         return getBestMoveObstacles(board, aiSymbol, humanSymbol, difficulty);
+      case BoardType.ThreePlayers3x3:
+        return getBestMoveThreePlayers(board, aiSymbol, difficulty);
+      case BoardType.Powers3x3:
+        return getBestMovePowers(board, aiSymbol, humanSymbol, difficulty);
       default:
         return { x: 0, y: 0, z: 0, w: 0 };
     }

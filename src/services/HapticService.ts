@@ -27,6 +27,13 @@ export class HapticService {
     } catch {}
   }
 
+  public static heavyImpact() {
+    if (!this.enabled) return;
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch {}
+  }
+
   public static selection() {
     if (!this.enabled) return;
     try {

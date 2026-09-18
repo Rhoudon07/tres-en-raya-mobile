@@ -453,6 +453,9 @@ export function getWinningLines(type: BoardType): Vector4i[][] {
     case BoardType.Misere3x3:
     case BoardType.Movement3x3:
     case BoardType.TimeAttack3x3:
+    case BoardType.ThreePlayers3x3:
+    case BoardType.Powers3x3:
+    default:
       if (!cached3x3) cached3x3 = generateWinningLines3x3();
       return cached3x3;
     case BoardType.Connect4x4:
@@ -476,6 +479,37 @@ export function getWinningLines(type: BoardType): Vector4i[][] {
       if (!cachedUltimate) cachedUltimate = generateWinningLinesUltimate();
       return cachedUltimate;
   }
+}
+
+export function getWinningLinesForDimension(dimension: string): Vector4i[][] {
+  switch (dimension) {
+    case '4x4':
+      if (!cached4x4) cached4x4 = generateWinningLines4x4();
+      return cached4x4;
+    case '5x5':
+      if (!cached5x5) cached5x5 = generateWinningLines5x5();
+      return cached5x5;
+    case '3D':
+      if (!cached3D) cached3D = generateWinningLines3D();
+      return cached3D;
+    case '4D':
+      if (!cached4D) cached4D = generateWinningLines4D();
+      return cached4D;
+    case '3x3':
+    default:
+      if (!cached3x3) cached3x3 = generateWinningLines3x3();
+      return cached3x3;
+  }
+}
+
+const cachedDimensionIndices: Record<string, number[][]> = {};
+
+export function getWinningLineIndicesForDimension(dimension: string): number[][] {
+  if (!cachedDimensionIndices[dimension]) {
+    const lines = getWinningLinesForDimension(dimension);
+    cachedDimensionIndices[dimension] = lines.map((line) => line.map(coordToIndex));
+  }
+  return cachedDimensionIndices[dimension];
 }
 
 export function getWinningLineIndices(type: BoardType): number[][] {

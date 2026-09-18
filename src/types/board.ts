@@ -2,7 +2,7 @@
  * Tipos y estructuras del tablero
  */
 
-export type CellSymbol = 'X' | 'O' | ' ' | '#';
+export type CellSymbol = 'X' | 'O' | 'Y' | ' ' | '#';
 
 export enum BoardType {
   TicTacToe3x3 = 'TicTacToe3x3', // Tres en Raya clásico (3x3, 3 en línea libre)
@@ -18,6 +18,9 @@ export enum BoardType {
   Movement3x3 = 'Movement3x3',   // Tres en Raya con Movimiento (Colocación 3 fichas + desplazamiento adyacente)
   TimeAttack3x3 = 'TimeAttack3x3', // Contrarreloj (Límite estricto de tiempo por turno o reloj total)
   Obstacles4x4 = 'Obstacles4x4', // 4x4 con casillas bloqueadas / obstáculos (piedras fijas)
+  ThreePlayers3x3 = 'ThreePlayers3x3', // Tres Jugadores simultáneos (X, O, Y en 3x3)
+  Powers3x3 = 'Powers3x3',       // Modo con Habilidades Tácticas (Bomba, Doble Turno, Bloqueo, Swap)
+  Custom = 'Custom',             // Modo Laboratorio con Reglas Personalizadas
 }
 
 export interface MovementMove {

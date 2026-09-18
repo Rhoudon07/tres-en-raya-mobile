@@ -72,7 +72,14 @@ export const Cell2D: React.FC<Cell2DProps> = ({
     }${isSelected ? ', seleccionada para mover' : ''}`;
   };
 
-  const tokenColor = symbol === 'X' ? Colors.playerX : symbol === 'O' ? Colors.playerO : '#94a3b8';
+  const tokenColor =
+    symbol === 'X'
+      ? Colors.playerX
+      : symbol === 'O'
+      ? Colors.playerO
+      : symbol === 'Y'
+      ? Colors.playerY
+      : '#94a3b8';
   const canPress = !disabled && symbol !== '#' && (symbol === ' ' || isSelectable || isSelected);
 
   return (

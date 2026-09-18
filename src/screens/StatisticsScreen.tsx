@@ -51,6 +51,9 @@ export const StatisticsScreen: React.FC<StatisticsScreenProps> = ({ navigation }
     [BoardType.TicTacToe4D]: '3x3x3x3 4D (Teseracto)',
     [BoardType.Ultimate]: 'Ultimate (9 Tableros)',
     [BoardType.Obstacles4x4]: '4x4 con Obstáculos',
+    [BoardType.ThreePlayers3x3]: '3 Jugadores (3x3)',
+    [BoardType.Powers3x3]: '3x3 con Habilidades',
+    [BoardType.Custom]: 'Modo Laboratorio',
   };
 
   return (

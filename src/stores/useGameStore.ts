@@ -10,8 +10,13 @@ import { AudioService } from '../services/AudioService';
 import { HapticService } from '../services/HapticService';
 import { ReviewEngine } from '../game/review/ReviewEngine';
 
+import { PowerType, PlayerPowers, createInitialPlayerPowers } from '../types/powers';
+import { getBestDecisionPowers } from '../game/ai/MinimaxPowers';
+import { CustomGameRules } from '../types/lab';
+
 interface GameStoreState {
   boardType: BoardType;
+  customRules?: CustomGameRules;
   board: BoardModel;
   mode: GameMode;
   turnOrder: PlayerTurnOrder;
@@ -27,11 +32,18 @@ interface GameStoreState {
   // Propiedad para selección de ficha en modalidad Movimiento
   selectedPiece: Vector4i | null;
 
+  // Propiedades para modalidad de Poderes
+  playerPowers: { X: PlayerPowers; O: PlayerPowers };
+  activePower: PowerType | null;
+  powerTargetFirst: Vector4i | null;
+  doubleTurnRemaining: number;
+
   // Acciones
-  setBoardType: (type: BoardType) => void;
+  setBoardType: (type: BoardType, customRules?: CustomGameRules) => void;
   startNewGame: (mode: GameMode, order?: PlayerTurnOrder) => void;
   restartCurrentGame: () => void;
   selectPiece: (pos: Vector4i | null) => void;
+  selectPower: (power: PowerType | null) => void;
   playMove: (pos: Vector4i) => Promise<boolean>;
   playPieceMove: (from: Vector4i, to: Vector4i) => Promise<boolean>;
   handleTimeout: (timedOutPlayer: CellSymbol) => void;
@@ -54,15 +66,24 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   moveHistory: [],
   reviewReport: null,
   selectedPiece: null,
+  playerPowers: { X: createInitialPlayerPowers(), O: createInitialPlayerPowers() },
+  activePower: null,
+  powerTargetFirst: null,
+  doubleTurnRemaining: 0,
 
   selectPiece: (pos: Vector4i | null) => {
     set({ selectedPiece: pos });
   },
 
-  setBoardType: (type: BoardType) => {
+  selectPower: (power: PowerType | null) => {
+    set({ activePower: power, powerTargetFirst: null });
+  },
+
+  setBoardType: (type: BoardType, customRules?: CustomGameRules) => {
     set({
       boardType: type,
-      board: new BoardModel(type),
+      customRules,
+      board: new BoardModel(type, customRules),
       gameOver: false,
       resultMessage: '',
       winningLine: null,
@@ -70,6 +91,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       reviewReport: null,
       isCpuThinking: false,
       selectedPiece: null,
+      playerPowers: { X: createInitialPlayerPowers(), O: createInitialPlayerPowers() },
+      activePower: null,
+      powerTargetFirst: null,
+      doubleTurnRemaining: 0,
     });
   },
 
@@ -80,7 +105,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     }
 
     const currentBoardType = get().boardType;
-    const newBoard = new BoardModel(currentBoardType);
+    const currentRules = get().customRules;
+    const newBoard = new BoardModel(currentBoardType, currentRules);
 
     set({
       mode,
@@ -94,6 +120,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       reviewReport: null,
       isCpuThinking: false,
       selectedPiece: null,
+      playerPowers: { X: createInitialPlayerPowers(), O: createInitialPlayerPowers() },
+      activePower: null,
+      powerTargetFirst: null,
+      doubleTurnRemaining: 0,
     });
 
     // Si la CPU juega primero (TurnOrder.Second en PvCPU o en CPUvCPU)
@@ -142,6 +172,155 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
       HapticService.warning();
       return false;
+    }
+
+    // En modalidad Poderes con poder activo:
+    if (state.board.isPowers() && state.activePower) {
+      const curSym = state.currentTurn;
+      const powers = {
+        X: { ...state.playerPowers.X },
+        O: { ...state.playerPowers.O },
+      };
+      const curPowers = curSym === 'X' ? powers.X : powers.O;
+
+      // 1. BOMBA
+      if (state.activePower === PowerType.Bomb) {
+        if (state.board.isCellEmpty(pos) || state.board.isCellBlocked(pos)) {
+          HapticService.warning();
+          return false;
+        }
+        const success = state.board.clearCell(pos);
+        if (!success) return false;
+
+        curPowers.bombUsed = true;
+        AudioService.playMoveX();
+        HapticService.heavyImpact();
+
+        const nextTurn = curSym === 'X' ? 'O' : 'X';
+        set({
+          board: state.board.clone(),
+          playerPowers: powers,
+          activePower: null,
+          currentTurn: nextTurn,
+        });
+
+        setTimeout(() => {
+          get().executeCpuTurnIfNeeded();
+        }, 50);
+        return true;
+      }
+
+      // 2. BLOQUEO DE CASILLA
+      if (state.activePower === PowerType.BlockCell) {
+        if (!state.board.isCellEmpty(pos)) {
+          HapticService.warning();
+          return false;
+        }
+        const success = state.board.setObstacleCell(pos);
+        if (!success) return false;
+
+        curPowers.blockCellUsed = true;
+        AudioService.playMoveO();
+        HapticService.mediumImpact();
+
+        const nextTurn = curSym === 'X' ? 'O' : 'X';
+        set({
+          board: state.board.clone(),
+          playerPowers: powers,
+          activePower: null,
+          currentTurn: nextTurn,
+        });
+
+        setTimeout(() => {
+          get().executeCpuTurnIfNeeded();
+        }, 50);
+        return true;
+      }
+
+      // 3. INTERCAMBIO CUÁNTICO (SWAP)
+      if (state.activePower === PowerType.Swap) {
+        if (state.board.isCellEmpty(pos) || state.board.isCellBlocked(pos)) {
+          HapticService.warning();
+          return false;
+        }
+
+        if (!state.powerTargetFirst) {
+          set({ powerTargetFirst: pos });
+          HapticService.selection();
+          return true;
+        } else {
+          const firstPos = state.powerTargetFirst;
+          if (areVectorsEqual(firstPos, pos)) {
+            set({ powerTargetFirst: null });
+            return true;
+          }
+
+          const success = state.board.swapCells(firstPos, pos);
+          if (!success) {
+            HapticService.warning();
+            return false;
+          }
+
+          curPowers.swapUsed = true;
+          AudioService.playMoveX();
+          HapticService.heavyImpact();
+
+          const { winner, winningLine } = state.board.checkWinner();
+          if (winner !== ' ') {
+            const newScore = { ...state.score };
+            let msg = '';
+            if (winner === 'X') {
+              newScore.xWins++;
+              msg = '¡Victoria para X!';
+              AudioService.playWin();
+            } else if (winner === 'O') {
+              newScore.oWins++;
+              msg = '¡Victoria para O!';
+              AudioService.playWin();
+            } else {
+              newScore.draws++;
+              msg = '¡Empate!';
+              AudioService.playDraw();
+            }
+            set({
+              board: state.board.clone(),
+              playerPowers: powers,
+              activePower: null,
+              powerTargetFirst: null,
+              gameOver: true,
+              resultMessage: msg,
+              winningLine: winningLine || null,
+              score: newScore,
+            });
+            return true;
+          }
+
+          const nextTurn = curSym === 'X' ? 'O' : 'X';
+          set({
+            board: state.board.clone(),
+            playerPowers: powers,
+            activePower: null,
+            powerTargetFirst: null,
+            currentTurn: nextTurn,
+          });
+
+          setTimeout(() => {
+            get().executeCpuTurnIfNeeded();
+          }, 50);
+          return true;
+        }
+      }
+
+      // 4. DOBLE TURNO
+      if (state.activePower === PowerType.DoubleTurn) {
+        curPowers.doubleTurnUsed = true;
+        set({
+          playerPowers: powers,
+          doubleTurnRemaining: 2,
+          activePower: null,
+        });
+        // Continúa hacia la colocación de la primera ficha
+      }
     }
 
     // En 4x4 gravedad, ajustar la fila a la más baja disponible
@@ -195,6 +374,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
           : '¡Victoria para O!';
         AudioService.playWin();
         HapticService.success();
+      } else if (winner === 'Y') {
+        newScore.yWins = (newScore.yWins || 0) + 1;
+        msg = state.mode === GameMode.PvCPU
+          ? 'La CPU (Y) ha ganado'
+          : '¡Victoria para Y!';
+        AudioService.playWin();
+        HapticService.success();
       } else {
         newScore.draws++;
         msg = '¡Empate!';
@@ -205,7 +391,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const userSymbol = state.mode === GameMode.PvCPU
         ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
         : state.mode === GameMode.PvP ? 'X' : null;
-      useStatsStore.getState().recordMatch(state.boardType, winner as 'X' | 'O' | 'D', userSymbol);
+      useStatsStore.getState().recordMatch(state.boardType, winner as any, userSymbol);
 
       const currentBoardType = state.boardType;
       set({
@@ -239,10 +425,22 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     }
 
     // Cambiar turno
-    const nextTurn = curSymbol === 'X' ? 'O' : 'X';
+    let nextTurn: CellSymbol = state.board.isThreePlayers()
+      ? (curSymbol === 'X' ? 'O' : curSymbol === 'O' ? 'Y' : 'X')
+      : (curSymbol === 'X' ? 'O' : 'X');
+
+    let newDoubleTurnRemaining = state.doubleTurnRemaining;
+    if (state.board.isPowers() && state.doubleTurnRemaining > 0) {
+      newDoubleTurnRemaining--;
+      if (newDoubleTurnRemaining > 0) {
+        nextTurn = curSymbol;
+      }
+    }
+
     set({
       board: state.board.clone(),
       currentTurn: nextTurn,
+      doubleTurnRemaining: newDoubleTurnRemaining,
       moveHistory: updatedHistory,
       selectedPiece: null,
     });
@@ -431,8 +629,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     const isCpuTurn =
       state.mode === GameMode.CPUvCPU ||
       (state.mode === GameMode.PvCPU &&
-        ((state.turnOrder === PlayerTurnOrder.First && state.currentTurn === 'O') ||
-          (state.turnOrder === PlayerTurnOrder.Second && state.currentTurn === 'X')));
+        (state.board.isThreePlayers()
+          ? (state.currentTurn === 'O' || state.currentTurn === 'Y')
+          : ((state.turnOrder === PlayerTurnOrder.First && state.currentTurn === 'O') ||
+             (state.turnOrder === PlayerTurnOrder.Second && state.currentTurn === 'X'))));
 
     if (!isCpuTurn) return;
 
@@ -443,7 +643,20 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     const humanSymbol = aiSymbol === 'X' ? 'O' : 'X';
 
     try {
-      if (state.board.isMovement() && state.board.isMovementPhase()) {
+      if (state.board.isPowers()) {
+        const p = state.playerPowers[aiSymbol as 'X' | 'O'] || createInitialPlayerPowers();
+        const decision = getBestDecisionPowers(state.board, aiSymbol, humanSymbol, p, diff);
+        if (decision.powerToUse === PowerType.DoubleTurn) {
+          get().selectPower(PowerType.DoubleTurn);
+        } else if (decision.powerToUse === PowerType.BlockCell && decision.powerTarget) {
+          get().selectPower(PowerType.BlockCell);
+          set({ isCpuThinking: false });
+          await get().playMove(decision.powerTarget);
+          return;
+        }
+        set({ isCpuThinking: false });
+        await get().playMove(decision.move);
+      } else if (state.board.isMovement() && state.board.isMovementPhase()) {
         const bestPieceMove = await AIEngine.getBestPieceMoveAsync(state.board, aiSymbol, humanSymbol, diff, 450);
         set({ isCpuThinking: false });
         await get().playPieceMove(bestPieceMove.from, bestPieceMove.to);

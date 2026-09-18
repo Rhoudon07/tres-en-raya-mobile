@@ -47,6 +47,9 @@ const DEFAULT_STATS: OverallStats = {
     [BoardType.Movement3x3]: createEmptyModeStats(),
     [BoardType.TimeAttack3x3]: createEmptyModeStats(),
     [BoardType.Obstacles4x4]: createEmptyModeStats(),
+    [BoardType.ThreePlayers3x3]: createEmptyModeStats(),
+    [BoardType.Powers3x3]: createEmptyModeStats(),
+    [BoardType.Custom]: createEmptyModeStats(),
   },
 };
 

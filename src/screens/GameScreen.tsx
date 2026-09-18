@@ -16,7 +16,10 @@ import { BoardUltimate } from '../components/board/BoardUltimate';
 import { ResultModal } from '../components/game/ResultModal';
 import { GameTimer } from '../components/game/GameTimer';
 import { GameButton } from '../components/common/GameButton';
+import { PowerBar } from '../components/board/PowerBar';
 import { Badge } from '../components/common/Badge';
+import { useCampaignStore } from '../stores/useCampaignStore';
+import { CAMPAIGN_LEVELS } from '../types/campaign';
 
 interface GameScreenProps {
   navigation: any;
@@ -36,19 +39,69 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   const playMove = useGameStore((state) => state.playMove);
   const handleTimeout = useGameStore((state) => state.handleTimeout);
   const restartCurrentGame = useGameStore((state) => state.restartCurrentGame);
+  const playerPowers = useGameStore((state) => state.playerPowers);
+  const activePower = useGameStore((state) => state.activePower);
+  const selectPower = useGameStore((state) => state.selectPower);
 
   const soundEnabled = useSettingsStore((state) => state.soundEnabled);
   const setSoundEnabled = useSettingsStore((state) => state.setSoundEnabled);
   const diff = useSettingsStore((state) => state.difficulties[boardType]);
 
-  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const moveHistory = useGameStore((state) => state.moveHistory);
+  const reviewReport = useGameStore((state) => state.reviewReport);
+  const activeCampaignLevelId = useCampaignStore((state) => state.activeLevelId);
+  const completeCampaignLevel = useCampaignStore((state) => state.completeLevel);
 
-  // Sincronizar visibilidad del modal de resultado con el estado del juego
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [earnedStars, setEarnedStars] = useState<number | undefined>(undefined);
+
+  // Sincronizar visibilidad del modal de resultado y evaluar progresión de campaña
   useEffect(() => {
     if (gameOver) {
       setResultModalVisible(true);
+      if (activeCampaignLevelId !== null) {
+        const level = CAMPAIGN_LEVELS.find((l) => l.id === activeCampaignLevelId);
+        const winner =
+          winningLine && winningLine.length > 0
+            ? board.getCell(winningLine[0])
+            : resultMessage.includes('Empate')
+            ? 'D'
+            : resultMessage.includes('X')
+            ? 'X'
+            : ' ';
+
+        if (winner === 'X' && level) {
+          let stars = 1; // 1 estrella garantizada por victoria
+          const userMoves = moveHistory.filter((m) => m.symbol === 'X').length;
+
+          // Condición estrella 2
+          const cond2 = level.starConditions[1];
+          if (cond2.type === 'max_moves' && cond2.threshold) {
+            if (userMoves <= cond2.threshold) stars++;
+          } else if (cond2.type === 'no_timeout') {
+            stars++;
+          }
+
+          // Condición estrella 3
+          const cond3 = level.starConditions[2];
+          const accuracy = reviewReport?.accuracyX ?? 85;
+          if (cond3.type === 'min_accuracy' && cond3.threshold) {
+            if (accuracy >= cond3.threshold) stars++;
+          } else if (cond3.type === 'max_moves' && cond3.threshold) {
+            if (userMoves <= cond3.threshold) stars++;
+          }
+
+          setEarnedStars(stars);
+          completeCampaignLevel(activeCampaignLevelId, stars, userMoves, accuracy);
+        } else {
+          setEarnedStars(0);
+        }
+      } else {
+        setEarnedStars(undefined);
+      }
     } else {
       setResultModalVisible(false);
+      setEarnedStars(undefined);
     }
   }, [gameOver]);
 
@@ -87,6 +140,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
       case BoardType.Misere3x3:
       case BoardType.Movement3x3:
       case BoardType.TimeAttack3x3:
+      case BoardType.Obstacles4x4:
+      case BoardType.ThreePlayers3x3:
+      case BoardType.Powers3x3:
+      case BoardType.Custom:
         return (
           <Board2D
             board={board}
@@ -205,6 +262,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
         {/* Tablero de juego activo */}
         <View style={styles.boardContainer}>{renderActiveBoard()}</View>
 
+        {/* Barra de Habilidades Tácticas en Modo Poderes */}
+        {boardType === BoardType.Powers3x3 && !gameOver && (
+          <PowerBar
+            powers={currentTurn === 'X' ? playerPowers.X : playerPowers.O}
+            activePower={activePower}
+            onSelectPower={selectPower}
+            disabled={isCpuThinking}
+          />
+        )}
+
         {/* Botones inferiores de acción */}
         <View style={styles.bottomControls}>
           {gameOver && !resultModalVisible ? (
@@ -225,10 +292,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
                   style={styles.bottomBtn}
                 />
                 <GameButton
-                  title="CAMBIAR MODO"
+                  title={activeCampaignLevelId !== null ? 'VOLVER AL MAPA' : 'CAMBIAR MODO'}
                   variant="outline"
                   size="small"
-                  onPress={() => navigation.navigate('BoardSelect')}
+                  onPress={() => {
+                    if (activeCampaignLevelId !== null) {
+                      navigation.navigate('Campaign');
+                    } else {
+                      navigation.navigate('BoardSelect');
+                    }
+                  }}
                   style={styles.bottomBtn}
                 />
               </View>
@@ -243,10 +316,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
                 style={styles.bottomBtn}
               />
               <GameButton
-                title="CAMBIAR MODO"
+                title={activeCampaignLevelId !== null ? 'VOLVER AL MAPA' : 'CAMBIAR MODO'}
                 variant="outline"
                 size="small"
-                onPress={() => navigation.navigate('BoardSelect')}
+                onPress={() => {
+                  if (activeCampaignLevelId !== null) {
+                    navigation.navigate('Campaign');
+                  } else {
+                    navigation.navigate('BoardSelect');
+                  }
+                }}
                 style={styles.bottomBtn}
               />
             </View>
@@ -264,6 +343,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
             : resultMessage.includes('Empate')
             ? 'D'
             : ' '
+        }
+        campaignStars={activeCampaignLevelId !== null ? earnedStars : undefined}
+        onReturnToCampaign={
+          activeCampaignLevelId !== null
+            ? () => {
+                setResultModalVisible(false);
+                navigation.navigate('Campaign');
+              }
+            : undefined
         }
         onPlayAgain={() => {
           setResultModalVisible(false);

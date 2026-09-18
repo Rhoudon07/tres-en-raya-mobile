@@ -49,7 +49,14 @@ export const TurnIndicator: React.FC<TurnIndicatorProps> = ({
     );
   }
 
-  const activeColor = currentTurn === 'X' ? Colors.playerX : Colors.playerO;
+  const activeColor =
+    currentTurn === 'X'
+      ? Colors.playerX
+      : currentTurn === 'O'
+      ? Colors.playerO
+      : currentTurn === 'Y'
+      ? Colors.playerY
+      : Colors.textSecondary;
 
   return (
     <Animated.View style={[styles.container, animatedStyle]}>

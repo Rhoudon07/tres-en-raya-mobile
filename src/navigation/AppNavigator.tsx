@@ -11,6 +11,8 @@ import { StatisticsScreen } from '../screens/StatisticsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { AboutScreen } from '../screens/AboutScreen';
 import { PuzzleScreen } from '../screens/PuzzleScreen';
+import { LabScreen } from '../screens/LabScreen';
+import { CampaignMapScreen } from '../screens/CampaignMapScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -22,6 +24,8 @@ export type RootStackParamList = {
   Settings: undefined;
   About: undefined;
   Puzzle: undefined;
+  Lab: undefined;
+  Campaign: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -47,6 +51,8 @@ export const AppNavigator: React.FC = () => {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
       <Stack.Screen name="Puzzle" component={PuzzleScreen} />
+      <Stack.Screen name="Lab" component={LabScreen} />
+      <Stack.Screen name="Campaign" component={CampaignMapScreen} />
     </Stack.Navigator>
   );
 };

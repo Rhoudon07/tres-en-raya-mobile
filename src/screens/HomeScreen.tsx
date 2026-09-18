@@ -100,10 +100,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           />
 
           <GameButton
+            title="MODO CAMPAÑA"
+            size="medium"
+            variant="primary"
+            onPress={() => navigation.navigate('Campaign')}
+          />
+
+          <GameButton
             title="DESAFÍOS Y PUZZLES"
             size="medium"
             variant="secondary"
             onPress={() => navigation.navigate('Puzzle')}
+          />
+
+          <GameButton
+            title="MODO LABORATORIO"
+            size="medium"
+            variant="secondary"
+            onPress={() => navigation.navigate('Lab')}
           />
 
           <GameButton

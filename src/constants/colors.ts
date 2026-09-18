@@ -17,6 +17,7 @@ export const Colors = {
   // Fichas
   playerX: '#00d4ff',             // Cian neón vibrante
   playerO: '#ff4d79',             // Rosa / Coral vibrante
+  playerY: '#10b981',             // Verde esmeralda neón vibrante
   winLine: '#ffd700',             // Dorado resplandeciente
 
   // Textos

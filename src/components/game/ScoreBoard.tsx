@@ -18,15 +18,25 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({ score }) => {
       <View style={styles.divider} />
 
       <View style={styles.item}>
-        <Text style={styles.drawSymbol}>EMPATES</Text>
-        <Text style={styles.drawScore}>{score.draws}</Text>
+        <Text style={[styles.symbol, { color: Colors.playerO }]}>O</Text>
+        <Text style={[styles.score, { color: Colors.playerO }]}>{score.oWins}</Text>
       </View>
+
+      {score.yWins !== undefined && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.item}>
+            <Text style={[styles.symbol, { color: Colors.playerY }]}>Y</Text>
+            <Text style={[styles.score, { color: Colors.playerY }]}>{score.yWins}</Text>
+          </View>
+        </>
+      )}
 
       <View style={styles.divider} />
 
       <View style={styles.item}>
-        <Text style={[styles.symbol, { color: Colors.playerO }]}>O</Text>
-        <Text style={[styles.score, { color: Colors.playerO }]}>{score.oWins}</Text>
+        <Text style={styles.drawSymbol}>EMPATES</Text>
+        <Text style={styles.drawScore}>{score.draws}</Text>
       </View>
     </View>
   );

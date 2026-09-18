@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../constants/colors';
 import { BoardType } from '../types/board';
 import { useGameStore } from '../stores/useGameStore';
+import { useCampaignStore } from '../stores/useCampaignStore';
 import { Badge } from '../components/common/Badge';
 import { GameButton } from '../components/common/GameButton';
 import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
@@ -154,6 +155,26 @@ const BOARDS: BoardOption[] = [
     description: 'Tablero 4x4 con obstáculos fijos intransitables. Encuentra caminos alternativos para conectar 4 fichas mientras bloqueas al oponente.',
     accentColor: '#94a3b8',
   },
+  {
+    type: BoardType.ThreePlayers3x3,
+    title: '3 JUGADORES 3x3',
+    category: 'MULTIJUGADOR SIMULTÁNEO',
+    dimensions: '3 × 3 (X, O, Y)',
+    cells: 9,
+    lines: '8 líneas ganadoras',
+    description: 'Tres contendientes en el mismo tablero con rotación cíclica de turnos X → O → Y. ¡El primero en lograr 3 en raya gana!',
+    accentColor: Colors.playerY,
+  },
+  {
+    type: BoardType.Powers3x3,
+    title: '3x3 CON HABILIDADES',
+    category: 'PODERES TÁCTICOS',
+    dimensions: '3 × 3 (4 Poderes)',
+    cells: 9,
+    lines: '8 líneas ganadoras',
+    description: 'Tres en raya dinámico equipado con Bomba 💥, Doble Turno 🔄, Bloqueo de Casilla 🪨 e Intercambio Cuántico 🔀.',
+    accentColor: '#f43f5e',
+  },
 ];
 
 export const BoardSelectScreen: React.FC<BoardSelectScreenProps> = ({ navigation }) => {
@@ -161,6 +182,7 @@ export const BoardSelectScreen: React.FC<BoardSelectScreenProps> = ({ navigation
   const setBoardType = useGameStore((state) => state.setBoardType);
 
   const handleSelectBoard = (type: BoardType) => {
+    useCampaignStore.getState().setActiveLevel(null);
     setBoardType(type);
     navigation.navigate('GameMode');
   };
