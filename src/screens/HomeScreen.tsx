@@ -14,6 +14,7 @@ import { GameButton } from '../components/common/GameButton';
 import { ExitConfirmModal } from '../components/common/ExitConfirmModal';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useStatsStore } from '../stores/useStatsStore';
+import { Play, Trophy, Puzzle, FlaskConical, BarChart2, Settings, Info } from 'lucide-react-native';
 
 interface HomeScreenProps {
   navigation: any;
@@ -265,6 +266,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             title="JUGAR"
             size="large"
             variant="accent"
+            icon={<Play size={20} color={Colors.accentCyan} style={{ marginRight: 8 }} />}
             onPress={() => navigation.navigate('BoardSelect')}
           />
 
@@ -272,6 +274,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             title="MODO CAMPAÑA"
             size="medium"
             variant="primary"
+            icon={<Trophy size={18} color={Colors.accentGreen} style={{ marginRight: 8 }} />}
             onPress={() => navigation.navigate('Campaign')}
           />
 
@@ -279,6 +282,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             title="DESAFÍOS Y PUZZLES"
             size="medium"
             variant="secondary"
+            icon={<Puzzle size={18} color="#f59e0b" style={{ marginRight: 8 }} />}
             onPress={() => navigation.navigate('Puzzle')}
           />
 
@@ -286,18 +290,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             title="MODO LABORATORIO"
             size="medium"
             variant="secondary"
+            icon={<FlaskConical size={18} color="#a855f7" style={{ marginRight: 8 }} />}
             onPress={() => navigation.navigate('Lab')}
           />
 
           <GameButton
             title="ESTADÍSTICAS"
             size="medium"
+            icon={<BarChart2 size={18} color={Colors.accentCyan} style={{ marginRight: 8 }} />}
             onPress={() => navigation.navigate('Statistics')}
           />
 
           <GameButton
             title="CONFIGURACIÓN"
             size="medium"
+            icon={<Settings size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />}
             onPress={() => navigation.navigate('Settings')}
           />
 
@@ -305,14 +312,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             title="ACERCA DE"
             size="medium"
             variant="secondary"
+            icon={<Info size={18} color={Colors.textSecondary} style={{ marginRight: 8 }} />}
             onPress={() => navigation.navigate('About')}
           />
         </View>
-
-        {/* Pie de página */}
-        <Text style={styles.footerText}>
-          C++17 & SFML Port • Android & iOS Ready
-        </Text>
       </View>
 
       {/* Modal de confirmación para salir del juego */}

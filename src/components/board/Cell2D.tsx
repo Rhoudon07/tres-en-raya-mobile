@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, Pressable, ViewStyle } from 'react-native';
+import { StyleSheet, Text, Pressable, ViewStyle, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -24,6 +24,7 @@ interface Cell2DProps {
   onPress: () => void;
   disabled?: boolean;
   style?: ViewStyle;
+  disableAnimation?: boolean;
 }
 
 export const Cell2D: React.FC<Cell2DProps> = ({
@@ -41,6 +42,7 @@ export const Cell2D: React.FC<Cell2DProps> = ({
   onPress,
   disabled = false,
   style,
+  disableAnimation = false,
 }) => {
   const scale = useSharedValue(symbol !== ' ' ? 1 : 0);
   const opacity = useSharedValue(symbol !== ' ' ? 1 : 0);
@@ -131,22 +133,38 @@ export const Cell2D: React.FC<Cell2DProps> = ({
         style,
       ]}
     >
-      {symbol !== ' ' && (
-        <Animated.View style={animatedTokenStyle}>
-          <Text
-            style={[
-              styles.tokenText,
-              {
-                color: tokenColor,
-                fontSize: symbol === '#' ? size * 0.45 : size * 0.58,
-                opacity: isExpiring ? 0.75 : symbol === '#' ? 0.85 : 1,
-              },
-            ]}
-          >
-            {symbol === '#' ? '🪨' : symbol}
-          </Text>
-        </Animated.View>
-      )}
+      {symbol !== ' ' &&
+        (disableAnimation ? (
+          <View style={styles.tokenContainer}>
+            <Text
+              style={[
+                styles.tokenText,
+                {
+                  color: tokenColor,
+                  fontSize: symbol === '#' ? size * 0.45 : size * 0.58,
+                  opacity: isExpiring ? 0.75 : symbol === '#' ? 0.85 : 1,
+                },
+              ]}
+            >
+              {symbol === '#' ? '🪨' : symbol}
+            </Text>
+          </View>
+        ) : (
+          <Animated.View style={animatedTokenStyle}>
+            <Text
+              style={[
+                styles.tokenText,
+                {
+                  color: tokenColor,
+                  fontSize: symbol === '#' ? size * 0.45 : size * 0.58,
+                  opacity: isExpiring ? 0.75 : symbol === '#' ? 0.85 : 1,
+                },
+              ]}
+            >
+              {symbol === '#' ? '🪨' : symbol}
+            </Text>
+          </Animated.View>
+        ))}
 
       {/* Distintivo de ficha próxima a desaparecer */}
       {isExpiring && symbol !== ' ' && (
@@ -213,6 +231,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 10,
     elevation: 6,
+  },
+  tokenContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tokenText: {
     fontWeight: '900',

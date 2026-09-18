@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { Bot, Eye } from 'lucide-react-native';
 import { BoardModel } from '../../game/board/BoardModel';
 import { Vector4i, areVectorsEqual } from '../../types/board';
 import { Colors } from '../../constants/colors';
 import { Cell2D } from './Cell2D';
+import { WinningStrikeLine } from './WinningStrikeLine';
 import { countWinningLinesPassingThrough } from '../../game/board/WinningLines';
 
 interface Board4DProps {
@@ -12,6 +14,7 @@ interface Board4DProps {
   winningLine?: Vector4i[] | null;
   suggestedCell?: Vector4i | null;
   disabled?: boolean;
+  lastCpuMove?: Vector4i | null;
 }
 
 export const Board4D: React.FC<Board4DProps> = ({
@@ -20,6 +23,7 @@ export const Board4D: React.FC<Board4DProps> = ({
   winningLine,
   suggestedCell,
   disabled = false,
+  lastCpuMove = null,
 }) => {
   const { width } = useWindowDimensions();
   const [activeW, setActiveW] = useState<number>(1); // Universo central por defecto (0..2)
@@ -61,6 +65,24 @@ export const Board4D: React.FC<Board4DProps> = ({
     return areVectorsEqual({ x, y, z, w }, suggestedCell);
   };
 
+  const isCpuMoveInUniverse = (w: number): boolean => {
+    return lastCpuMove !== null && lastCpuMove !== undefined && lastCpuMove.w === w;
+  };
+
+  const isCpuMoveOnFloor = (w: number, z: number): boolean => {
+    return (
+      lastCpuMove !== null &&
+      lastCpuMove !== undefined &&
+      lastCpuMove.w === w &&
+      lastCpuMove.z === z
+    );
+  };
+
+  const isCpuCell = (x: number, y: number, z: number, w: number): boolean => {
+    if (!lastCpuMove) return false;
+    return areVectorsEqual({ x, y, z, w }, lastCpuMove);
+  };
+
   const handleCellPress = (x: number, y: number) => {
     const pos: Vector4i = { x, y, z: activeZ, w: activeW };
     setSelectedCoord(pos);
@@ -73,6 +95,42 @@ export const Board4D: React.FC<Board4DProps> = ({
 
   return (
     <View style={[styles.wrapper, { width: maxBoardWidth }]}>
+      {/* 0. Notificador interactivo de última jugada de la CPU */}
+      {lastCpuMove && (
+        <Pressable
+          onPress={() => {
+            setActiveW(lastCpuMove.w);
+            setActiveZ(lastCpuMove.z);
+            setSelectedCoord(lastCpuMove);
+          }}
+          style={({ pressed }) => [
+            styles.cpuBanner,
+            (lastCpuMove.w !== activeW || lastCpuMove.z !== activeZ) && styles.cpuBannerAway,
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <View style={styles.cpuBannerContent}>
+            <Bot size={16} color={Colors.accentPink} style={{ marginRight: 6 }} />
+            <Text style={styles.cpuBannerText}>
+              CPU jugó en:{' '}
+              <Text style={styles.cpuBannerCoords}>
+                W{lastCpuMove.w + 1} • Z{lastCpuMove.z + 1} • ({lastCpuMove.x + 1},{lastCpuMove.y + 1})
+              </Text>
+            </Text>
+          </View>
+          {lastCpuMove.w !== activeW || lastCpuMove.z !== activeZ ? (
+            <View style={styles.cpuBannerJumpBtn}>
+              <Eye size={12} color="#fff" style={{ marginRight: 4 }} />
+              <Text style={styles.cpuBannerJumpText}>IR AHORA</Text>
+            </View>
+          ) : (
+            <View style={styles.cpuBannerHereBadge}>
+              <Text style={styles.cpuBannerHereText}>AQUÍ</Text>
+            </View>
+          )}
+        </Pressable>
+      )}
+
       {/* 1. Selector de Universo W */}
       <View style={styles.selectorSection}>
         <Text style={styles.sectionLabel}>UNIVERSO (W)</Text>
@@ -81,6 +139,7 @@ export const Board4D: React.FC<Board4DProps> = ({
             const isSelected = activeW === w;
             const hasWin = hasWinInUniverse(w);
             const hasSug = hasSugInUniverse(w);
+            const isCpu = isCpuMoveInUniverse(w);
 
             return (
               <Pressable
@@ -105,6 +164,7 @@ export const Board4D: React.FC<Board4DProps> = ({
                 </Text>
                 {hasWin && <View style={styles.winDot} />}
                 {hasSug && <View style={styles.sugDot} />}
+                {isCpu && <View style={styles.cpuDot} />}
               </Pressable>
             );
           })}
@@ -119,6 +179,7 @@ export const Board4D: React.FC<Board4DProps> = ({
             const isSelected = activeZ === z;
             const hasWin = hasWinOnFloor(activeW, z);
             const hasSug = hasSugOnFloor(activeW, z);
+            const isCpu = isCpuMoveOnFloor(activeW, z);
 
             return (
               <Pressable
@@ -143,6 +204,7 @@ export const Board4D: React.FC<Board4DProps> = ({
                 </Text>
                 {hasWin && <View style={styles.winDot} />}
                 {hasSug && <View style={styles.sugDot} />}
+                {isCpu && <View style={styles.cpuDot} />}
               </Pressable>
             );
           })}
@@ -167,6 +229,7 @@ export const Board4D: React.FC<Board4DProps> = ({
           <View key={`row-${x}`} style={styles.row}>
             {Array.from({ length: gridSize }).map((_, y) => {
               const symbol = board.getCell4D(x, y, activeZ, activeW);
+              const isCpu = isCpuCell(x, y, activeZ, activeW);
               return (
                 <Cell2D
                   key={`cell-${x}-${y}-${activeZ}-${activeW}`}
@@ -177,12 +240,26 @@ export const Board4D: React.FC<Board4DProps> = ({
                   isWinningCell={isWinningCell(x, y, activeZ, activeW)}
                   isSuggested={isSuggested(x, y, activeZ, activeW)}
                   disabled={disabled}
+                  style={isCpu ? styles.cpuCellHighlight : undefined}
                   onPress={() => handleCellPress(x, y)}
                 />
               );
             })}
           </View>
         ))}
+
+        {winningLine &&
+          winningLine.length >= 3 &&
+          winningLine.every((p) => p.w === activeW && p.z === activeZ) && (
+            <WinningStrikeLine
+              winningLine={winningLine}
+              boardWidth={maxBoardWidth}
+              gridSize={gridSize}
+              cellSize={cellSize}
+              padding={10 + 4}
+              gap={8}
+            />
+          )}
       </View>
 
       {/* 5. Si hay victoria hiperdimensional que cruza universos, mostrar coordenadas */}
@@ -329,5 +406,87 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: Colors.textSecondary,
+  },
+  cpuBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#261521',
+    borderColor: Colors.accentPink,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+    shadowColor: Colors.accentPink,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  cpuBannerAway: {
+    backgroundColor: '#351227',
+    borderColor: '#ff2d75',
+  },
+  cpuBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cpuBannerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  cpuBannerCoords: {
+    color: Colors.accentPink,
+    fontWeight: '900',
+  },
+  cpuBannerJumpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.accentPink,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  cpuBannerJumpText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  cpuBannerHereBadge: {
+    backgroundColor: '#1b3323',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.winLine,
+  },
+  cpuBannerHereText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: Colors.winLine,
+    letterSpacing: 0.5,
+  },
+  cpuDot: {
+    position: 'absolute',
+    bottom: 3,
+    right: 3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.accentPink,
+  },
+  cpuCellHighlight: {
+    borderColor: Colors.accentPink,
+    borderWidth: 2,
+    backgroundColor: 'rgba(255, 45, 117, 0.18)',
+    shadowColor: Colors.accentPink,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 5,
   },
 });

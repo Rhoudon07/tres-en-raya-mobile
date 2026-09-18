@@ -103,9 +103,43 @@ export function evaluateBoard3D(board: BoardModel, aiSymbol: CellSymbol, humanSy
   return score;
 }
 
+// Valor posicional topológico de casillas en el cubo 3x3x3
+function getCellStrategicWeight3D(r: number, c: number, z: number): number {
+  // Centro absoluto (1,1,1): participa en 13 líneas ganadoras
+  if (r === 1 && c === 1 && z === 1) return 50;
+  // 8 esquinas: participan en 7 líneas cada una
+  const isCornerR = r === 0 || r === 2;
+  const isCornerC = c === 0 || c === 2;
+  const isCornerZ = z === 0 || z === 2;
+  if (isCornerR && isCornerC && isCornerZ) return 22;
+  // 6 centros de cara: participan en 4 líneas
+  const midCount = (r === 1 ? 1 : 0) + (c === 1 ? 1 : 0) + (z === 1 ? 1 : 0);
+  if (midCount === 2) return 12;
+  // 12 aristas intermedias: participan en 3 líneas
+  return 6;
+}
+
+export function getCandidateMoves3D(board: BoardModel): Vector4i[] {
+  const candidates: { pos: Vector4i; weight: number }[] = [];
+  for (let z = 0; z < 3; ++z) {
+    for (let r = 0; r < 3; ++r) {
+      for (let c = 0; c < 3; ++c) {
+        if (board.isCellEmpty3D(r, c, z)) {
+          const pos: Vector4i = { x: r, y: c, z, w: 0 };
+          candidates.push({ pos, weight: getCellStrategicWeight3D(r, c, z) });
+        }
+      }
+    }
+  }
+  // Ordenar de mayor a menor peso estratégico para maximizar cortes alfa-beta
+  candidates.sort((a, b) => b.weight - a.weight);
+  return candidates.map((c) => c.pos);
+}
+
 function minimax3D(
   board: BoardModel,
   depth: number,
+  maxDepth: number,
   isMaximizing: boolean,
   aiSymbol: CellSymbol,
   humanSymbol: CellSymbol,
@@ -117,46 +151,35 @@ function minimax3D(
   if (winner === humanSymbol) return depth - 10000;
   if (winner === 'D') return 0;
 
-  if (depth >= 2) {
+  if (depth >= maxDepth) {
     return evaluateBoard3D(board, aiSymbol, humanSymbol);
   }
 
+  const moves = getCandidateMoves3D(board);
+  if (moves.length === 0) return 0;
+
   if (isMaximizing) {
     let maxEval = -50000;
-    for (let z = 0; z < 3; ++z) {
-      for (let r = 0; r < 3; ++r) {
-        for (let c = 0; c < 3; ++c) {
-          if (board.isCellEmpty3D(r, c, z)) {
-            const pos: Vector4i = { x: r, y: c, z, w: 0 };
-            board.makeMove(pos, aiSymbol);
-            const evalScore = minimax3D(board, depth + 1, false, aiSymbol, humanSymbol, alpha, beta);
-            board.undoMove(pos);
+    for (const pos of moves) {
+      board.makeMove(pos, aiSymbol);
+      const evalScore = minimax3D(board, depth + 1, maxDepth, false, aiSymbol, humanSymbol, alpha, beta);
+      board.undoMove(pos);
 
-            maxEval = Math.max(maxEval, evalScore);
-            alpha = Math.max(alpha, evalScore);
-            if (beta <= alpha) break;
-          }
-        }
-      }
+      maxEval = Math.max(maxEval, evalScore);
+      alpha = Math.max(alpha, evalScore);
+      if (beta <= alpha) break;
     }
     return maxEval;
   } else {
     let minEval = 50000;
-    for (let z = 0; z < 3; ++z) {
-      for (let r = 0; r < 3; ++r) {
-        for (let c = 0; c < 3; ++c) {
-          if (board.isCellEmpty3D(r, c, z)) {
-            const pos: Vector4i = { x: r, y: c, z, w: 0 };
-            board.makeMove(pos, humanSymbol);
-            const evalScore = minimax3D(board, depth + 1, true, aiSymbol, humanSymbol, alpha, beta);
-            board.undoMove(pos);
+    for (const pos of moves) {
+      board.makeMove(pos, humanSymbol);
+      const evalScore = minimax3D(board, depth + 1, maxDepth, true, aiSymbol, humanSymbol, alpha, beta);
+      board.undoMove(pos);
 
-            minEval = Math.min(minEval, evalScore);
-            beta = Math.min(beta, evalScore);
-            if (beta <= alpha) break;
-          }
-        }
-      }
+      minEval = Math.min(minEval, evalScore);
+      beta = Math.min(beta, evalScore);
+      if (beta <= alpha) break;
     }
     return minEval;
   }
@@ -168,61 +191,85 @@ export function getBestMove3D(
   humanSymbol: CellSymbol,
   difficulty: Difficulty
 ): Vector4i {
-  // Nivel Fácil: 75% casilla 3D aleatoria
+  // 1. NIVEL FÁCIL: Para principiantes, con errores tácticos en diagonales cruzadas
   if (difficulty === Difficulty.Easy) {
-    if (Math.random() * 100 <= 75) {
+    if (Math.random() * 100 <= 45) {
       const rand = getRandomMove3D(board);
       if (rand) return rand;
     }
-    const winMove = findWinningOrBlockingMove3D(board, aiSymbol);
-    if (winMove) return winMove;
-    return getRandomMove3D(board) || { x: 1, y: 1, z: 1, w: 0 };
-  } else if (difficulty === Difficulty.Medium) {
-    // 1. Ganar si existe jugada directa (75%)
-    if (Math.random() * 100 <= 75) {
+    // 60% probabilidad de aprovechar victoria directa
+    if (Math.random() * 100 <= 60) {
       const winMove = findWinningOrBlockingMove3D(board, aiSymbol);
       if (winMove) return winMove;
     }
+    // 50% probabilidad de bloquear al rival
+    if (Math.random() * 100 <= 50) {
+      const blockMove = findWinningOrBlockingMove3D(board, humanSymbol);
+      if (blockMove) return blockMove;
+    }
+    // Jugada posicional básica
+    const moves = getCandidateMoves3D(board);
+    if (moves.length > 0) return moves[0];
+    return getRandomMove3D(board) || { x: 1, y: 1, z: 1, w: 0 };
+  }
 
-    // 2. Bloquear victoria rival (65%)
-    if (Math.random() * 100 <= 65) {
+const CORNERS_3D: [number, number, number][] = [
+  [0, 0, 0], [0, 2, 0], [2, 0, 0], [2, 2, 0],
+  [0, 0, 2], [0, 2, 2], [2, 0, 2], [2, 2, 2],
+];
+
+function getOpeningMove3D(board: BoardModel): Vector4i | null {
+  const occupied = board.getOccupiedCount();
+  if (occupied > 2) return null;
+
+  // 1. Centro absoluto del cubo (1,1,1) si está disponible (cruza 13 líneas ganadoras)
+  if (board.isCellEmpty3D(1, 1, 1)) {
+    return { x: 1, y: 1, z: 1, w: 0 };
+  }
+
+  // 2. Si el centro está ocupado (ej: el humano jugó centro en el turno 1):
+  // Responder inmediatamente tomando una esquina estratégica libre (0 ms)
+  const availableCorners = CORNERS_3D.filter(([r, c, z]) => board.isCellEmpty3D(r, c, z));
+  if (availableCorners.length > 0) {
+    const [cr, cc, cz] = availableCorners[Math.floor(Math.random() * availableCorners.length)];
+    return { x: cr, y: cc, z: cz, w: 0 };
+  }
+
+  return null;
+}
+
+  // 2. NIVEL MEDIO: Juego táctico sólido, 100% de victorias inmediatas y 90% bloqueos
+  if (difficulty === Difficulty.Medium) {
+    // Apertura instantánea para los 2 primeros turnos (0 ms)
+    const opening = getOpeningMove3D(board);
+    if (opening) return opening;
+
+    // Victoria inmediata garantizada
+    const winMove = findWinningOrBlockingMove3D(board, aiSymbol);
+    if (winMove) return winMove;
+
+    // Bloqueo directo de amenaza rival (92% de consistencia)
+    if (Math.random() * 100 <= 92) {
       const blockMove = findWinningOrBlockingMove3D(board, humanSymbol);
       if (blockMove) return blockMove;
     }
 
-    // 3. Tomar el centro del cubo si está libre (70%)
-    if (board.isCellEmpty3D(1, 1, 1) && Math.random() * 100 <= 70) {
-      return { x: 1, y: 1, z: 1, w: 0 };
-    }
-
-    // 4. 35% jugada aleatoria
-    if (Math.random() * 100 <= 35) {
-      const rand = getRandomMove3D(board);
-      if (rand) return rand;
-    }
-
-    // 5. Minimax depth 2
+    // Evaluación Minimax a profundidad 2 con cálculo real de respuesta del oponente
+    const candidates = getCandidateMoves3D(board);
     let bestVal = -50000;
     const bestMoves: Vector4i[] = [];
 
-    for (let z = 0; z < 3; ++z) {
-      for (let r = 0; r < 3; ++r) {
-        for (let c = 0; c < 3; ++c) {
-          if (board.isCellEmpty3D(r, c, z)) {
-            const pos: Vector4i = { x: r, y: c, z, w: 0 };
-            board.makeMove(pos, aiSymbol);
-            const moveVal = minimax3D(board, 2, false, aiSymbol, humanSymbol, -50000, 50000);
-            board.undoMove(pos);
+    for (const pos of candidates) {
+      board.makeMove(pos, aiSymbol);
+      const moveVal = minimax3D(board, 0, 2, false, aiSymbol, humanSymbol, -50000, 50000);
+      board.undoMove(pos);
 
-            if (moveVal > bestVal) {
-              bestVal = moveVal;
-              bestMoves.length = 0;
-              bestMoves.push(pos);
-            } else if (moveVal === bestVal) {
-              bestMoves.push(pos);
-            }
-          }
-        }
+      if (moveVal > bestVal) {
+        bestVal = moveVal;
+        bestMoves.length = 0;
+        bestMoves.push(pos);
+      } else if (moveVal === bestVal) {
+        bestMoves.push(pos);
       }
     }
 
@@ -232,38 +279,39 @@ export function getBestMove3D(
     return getRandomMove3D(board) || { x: 1, y: 1, z: 1, w: 0 };
   }
 
-  // Modo Difícil (Hard): 100% óptimo con Minimax 3D y control de centro
-  const occupied = board.getOccupiedCount();
-  if (occupied === 0) return { x: 1, y: 1, z: 1, w: 0 };
-  if (occupied === 1 && board.isCellEmpty3D(1, 1, 1)) return { x: 1, y: 1, z: 1, w: 0 };
+  // 3. NIVEL DIFÍCIL (IMBATIBLE): Minimax Alpha-Beta profundo con libro de apertura instantáneo
+  const opening = getOpeningMove3D(board);
+  if (opening) return opening;
 
+  const occupied = board.getOccupiedCount();
+
+  // Victoria inmediata
   const winMove = findWinningOrBlockingMove3D(board, aiSymbol);
   if (winMove) return winMove;
 
+  // Bloqueo de victoria rival
   const blockMove = findWinningOrBlockingMove3D(board, humanSymbol);
   if (blockMove) return blockMove;
 
+  // Profundidad adaptativa: 3 niveles normalmente, 4 cuando quedan pocas casillas libres
+  const emptyCount = 27 - occupied;
+  const searchDepth = emptyCount <= 12 ? 4 : 3;
+
+  const candidates = getCandidateMoves3D(board);
   let bestVal = -50000;
   const bestMoves: Vector4i[] = [];
 
-  for (let z = 0; z < 3; ++z) {
-    for (let r = 0; r < 3; ++r) {
-      for (let c = 0; c < 3; ++c) {
-        if (board.isCellEmpty3D(r, c, z)) {
-          const pos: Vector4i = { x: r, y: c, z, w: 0 };
-          board.makeMove(pos, aiSymbol);
-          const moveVal = minimax3D(board, 0, false, aiSymbol, humanSymbol, -50000, 50000);
-          board.undoMove(pos);
+  for (const pos of candidates) {
+    board.makeMove(pos, aiSymbol);
+    const moveVal = minimax3D(board, 0, searchDepth, false, aiSymbol, humanSymbol, -50000, 50000);
+    board.undoMove(pos);
 
-          if (moveVal > bestVal) {
-            bestVal = moveVal;
-            bestMoves.length = 0;
-            bestMoves.push(pos);
-          } else if (moveVal === bestVal) {
-            bestMoves.push(pos);
-          }
-        }
-      }
+    if (moveVal > bestVal) {
+      bestVal = moveVal;
+      bestMoves.length = 0;
+      bestMoves.push(pos);
+    } else if (moveVal === bestVal) {
+      bestMoves.push(pos);
     }
   }
 

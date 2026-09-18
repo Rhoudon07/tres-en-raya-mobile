@@ -4,6 +4,7 @@ import { Colors } from '../../constants/colors';
 import { CampaignLevel, CampaignLevelProgress } from '../../types/campaign';
 import { GameButton } from '../common/GameButton';
 import { Badge } from '../common/Badge';
+import { Star } from 'lucide-react-native';
 
 interface LevelBriefModalProps {
   visible: boolean;
@@ -126,9 +127,13 @@ export const LevelBriefModal: React.FC<LevelBriefModalProps> = ({
             {progress?.completed && (
               <View style={styles.recordBox}>
                 <Text style={styles.recordLabel}>RÉCORD ACTUAL</Text>
-                <Text style={styles.recordValue}>
-                  {currentStars} / 3 ⭐ • {progress.bestMoves !== undefined ? `${progress.bestMoves} turnos` : ''} • {progress.highScore} pts
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <Text style={styles.recordValue}>{currentStars} / 3</Text>
+                  <Star size={13} color="#f59e0b" fill="#f59e0b" />
+                  <Text style={styles.recordValue}>
+                    • {progress.bestMoves !== undefined ? `${progress.bestMoves} turnos` : ''} • {progress.highScore} pts
+                  </Text>
+                </View>
               </View>
             )}
 

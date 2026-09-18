@@ -4,6 +4,7 @@ import { BoardModel } from '../../game/board/BoardModel';
 import { Vector4i, areVectorsEqual, CellSymbol } from '../../types/board';
 import { Colors } from '../../constants/colors';
 import { Cell2D } from './Cell2D';
+import { WinningStrikeLine } from './WinningStrikeLine';
 
 import { PowerType } from '../../types/powers';
 
@@ -127,6 +128,17 @@ export const Board2D: React.FC<Board2DProps> = ({
           })}
         </View>
       ))}
+
+      {winningLine && winningLine.length >= 3 && (
+        <WinningStrikeLine
+          winningLine={winningLine}
+          boardWidth={maxBoardWidth}
+          gridSize={gridSize}
+          cellSize={cellSize}
+          padding={8 + 4}
+          gap={8}
+        />
+      )}
     </View>
   );
 };

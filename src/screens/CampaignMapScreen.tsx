@@ -21,6 +21,7 @@ import { GameMode, PlayerTurnOrder } from '../types/game';
 import { GameButton } from '../components/common/GameButton';
 import { Badge } from '../components/common/Badge';
 import { LevelBriefModal } from '../components/campaign/LevelBriefModal';
+import { Star } from 'lucide-react-native';
 
 interface CampaignMapScreenProps {
   navigation: any;
@@ -75,7 +76,8 @@ export const CampaignMapScreen: React.FC<CampaignMapScreenProps> = ({ navigation
           <Text style={styles.screenSubtitle}>Aventura Multidimensional</Text>
         </View>
         <Badge
-          label={`⭐ ${totalStars} / 36`}
+          label={`${totalStars} / 36`}
+          icon={<Star size={13} color="#fbbf24" fill="#fbbf24" />}
           color="#fbbf24"
           style={styles.starsBadge}
         />

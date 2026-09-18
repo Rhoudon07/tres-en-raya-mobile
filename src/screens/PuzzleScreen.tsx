@@ -1,6 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ArrowLeft,
+  ArrowRight,
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
+  Trophy,
+  Star,
+  RefreshCw,
+} from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { usePuzzleStore } from '../stores/usePuzzleStore';
 import { PUZZLE_CATALOG } from '../game/puzzles/PuzzleCatalog';
@@ -15,7 +25,9 @@ interface PuzzleScreenProps {
 }
 
 export const PuzzleScreen: React.FC<PuzzleScreenProps> = ({ navigation }) => {
-  const currentPuzzleIndex = usePuzzleStore((state) => state.currentPuzzleIndex);
+  const currentDifficulty = usePuzzleStore((state) => state.currentDifficulty);
+  const roundPuzzles = usePuzzleStore((state) => state.roundPuzzles);
+  const roundIndex = usePuzzleStore((state) => state.roundIndex);
   const currentPuzzle = usePuzzleStore((state) => state.currentPuzzle);
   const board = usePuzzleStore((state) => state.board);
   const isSolved = usePuzzleStore((state) => state.isSolved);
@@ -23,10 +35,24 @@ export const PuzzleScreen: React.FC<PuzzleScreenProps> = ({ navigation }) => {
   const feedbackMessage = usePuzzleStore((state) => state.feedbackMessage);
   const completedPuzzleIds = usePuzzleStore((state) => state.completedPuzzleIds);
   const selectedPiece = usePuzzleStore((state) => state.selectedPiece);
+  const failedInRound = usePuzzleStore((state) => state.failedInRound);
+  const isRepeatingFailed = usePuzzleStore((state) => state.isRepeatingFailed);
+  const allCompleted = usePuzzleStore((state) => state.allCompleted);
+
   const playMove = usePuzzleStore((state) => state.playMove);
   const retryPuzzle = usePuzzleStore((state) => state.retryPuzzle);
   const nextPuzzle = usePuzzleStore((state) => state.nextPuzzle);
-  const loadPuzzle = usePuzzleStore((state) => state.loadPuzzle);
+  const startDifficultyRound = usePuzzleStore((state) => state.startDifficultyRound);
+
+  // Auto-avance al fallar para no dar la respuesta y pasar al siguiente desafío
+  useEffect(() => {
+    if (isFailed) {
+      const timer = setTimeout(() => {
+        nextPuzzle();
+      }, 1400);
+      return () => clearTimeout(timer);
+    }
+  }, [isFailed, nextPuzzle]);
 
   const handleCellPress = (pos: Vector4i) => {
     playMove(pos);
@@ -47,7 +73,8 @@ export const PuzzleScreen: React.FC<PuzzleScreenProps> = ({ navigation }) => {
         {/* Barra Superior */}
         <View style={styles.topBar}>
           <GameButton
-            title="←"
+            title=""
+            icon={<ArrowLeft size={20} color="#fff" />}
             size="small"
             variant="outline"
             onPress={() => navigation.goBack()}
@@ -56,20 +83,35 @@ export const PuzzleScreen: React.FC<PuzzleScreenProps> = ({ navigation }) => {
           <View style={styles.titleColumn}>
             <Text style={styles.screenTitle}>DESAFÍOS TÁCTICOS</Text>
             <Text style={styles.screenSubtitle}>
-              Nivel {currentPuzzleIndex + 1} de {PUZZLE_CATALOG.length}
+              {isRepeatingFailed ? 'Repetición de Fallidos' : `Ronda ${currentDifficulty.toUpperCase()}`} • Desafío {roundIndex + 1} de {roundPuzzles.length}
             </Text>
           </View>
-          <Badge
-            label={currentPuzzle.difficulty.toUpperCase()}
-            color={difficultyColor}
-          />
+          <View style={styles.badgesGroup}>
+            {isRepeatingFailed && (
+              <Badge
+                label="REPETICIÓN"
+                color="#f59e0b"
+                icon={<RefreshCw size={10} color="#f59e0b" />}
+                style={{ marginRight: 6 }}
+              />
+            )}
+            <Badge
+              label={currentPuzzle.difficulty.toUpperCase()}
+              color={difficultyColor}
+            />
+          </View>
         </View>
 
-        {/* Consigna del Puzzle */}
+        {/* Consigna del Desafío */}
         <GameCard style={styles.missionCard}>
           <View style={styles.missionHeader}>
             <Text style={styles.missionTitle}>{currentPuzzle.title}</Text>
-            {isCompleted && <Text style={styles.starBadge}>⭐ Resuelto</Text>}
+            {isCompleted && (
+              <View style={styles.solvedBadgeContainer}>
+                <Star size={13} color="#eab308" fill="#eab308" style={{ marginRight: 4 }} />
+                <Text style={styles.starBadgeText}>Resuelto</Text>
+              </View>
+            )}
           </View>
           <Text style={styles.missionDesc}>
             {currentPuzzle.subtitle} • Juegas con ({currentPuzzle.playerSymbol})
@@ -83,69 +125,89 @@ export const PuzzleScreen: React.FC<PuzzleScreenProps> = ({ navigation }) => {
             onCellPress={handleCellPress}
             currentTurn={currentPuzzle.playerSymbol}
             selectedPiece={selectedPiece}
-            disabled={isSolved}
+            disabled={isSolved || isFailed}
           />
         </View>
 
-        {/* Retroalimentación de Éxito / Error */}
+        {/* Estado: Éxito */}
         {isSolved && (
           <GameCard style={styles.successCard}>
-            <Text style={styles.successTitle}>🎉 ¡DESAFÍO COMPLETADO!</Text>
-            <Text style={styles.feedbackText}>{feedbackMessage}</Text>
-            {currentPuzzleIndex < PUZZLE_CATALOG.length - 1 ? (
-              <GameButton
-                title="SIGUIENTE DESAFÍO →"
-                size="medium"
-                variant="accent"
-                onPress={nextPuzzle}
-                style={styles.actionBtn}
-              />
-            ) : (
-              <Text style={styles.completedAllText}>
-                🏆 ¡Has completado todos los desafíos tácticos disponibles!
-              </Text>
-            )}
-          </GameCard>
-        )}
-
-        {isFailed && (
-          <GameCard style={styles.failCard}>
-            <Text style={styles.failTitle}>❌ JUGADA INCORRECTA</Text>
+            <View style={styles.cardHeaderRow}>
+              <CheckCircle2 size={20} color="#4ade80" style={{ marginRight: 8 }} />
+              <Text style={styles.successTitle}>¡DESAFÍO COMPLETADO!</Text>
+            </View>
             <Text style={styles.feedbackText}>{feedbackMessage}</Text>
             <GameButton
-              title="REINTENTAR"
+              title="SIGUIENTE DESAFÍO"
+              icon={<ArrowRight size={16} color="#000" />}
               size="medium"
-              variant="outline"
-              onPress={retryPuzzle}
+              variant="accent"
+              onPress={nextPuzzle}
               style={styles.actionBtn}
             />
           </GameCard>
         )}
 
-        {/* Controles de Navegación de Puzzles */}
-        <View style={styles.navigationRow}>
+        {/* Estado: Fallo (Sin revelar respuesta, avanza al siguiente) */}
+        {isFailed && (
+          <GameCard style={styles.failCard}>
+            <View style={styles.cardHeaderRow}>
+              <XCircle size={20} color="#f87171" style={{ marginRight: 8 }} />
+              <Text style={styles.failTitle}>JUGADA INCORRECTA</Text>
+            </View>
+            <Text style={styles.feedbackText}>{feedbackMessage}</Text>
+            <GameButton
+              title="SIGUIENTE DESAFÍO"
+              icon={<ArrowRight size={16} color="#fff" />}
+              size="medium"
+              variant="outline"
+              onPress={nextPuzzle}
+              style={styles.actionBtn}
+            />
+          </GameCard>
+        )}
+
+        {/* Todos los desafíos completados */}
+        {allCompleted && (
+          <GameCard style={styles.completedCard}>
+            <Trophy size={42} color="#eab308" style={{ marginBottom: 8 }} />
+            <Text style={styles.completedTitle}>¡TODOS LOS DESAFÍOS COMPLETADOS!</Text>
+            <Text style={styles.completedText}>
+              Has superado con éxito todas las dificultades de los desafíos tácticos.
+            </Text>
+            <GameButton
+              title="REINICIAR DESDE NIVEL FÁCIL"
+              icon={<RotateCcw size={16} color="#000" />}
+              size="medium"
+              variant="accent"
+              onPress={() => startDifficultyRound('easy')}
+              style={styles.actionBtn}
+            />
+          </GameCard>
+        )}
+
+        {/* Selector de Dificultades de Ronda */}
+        <View style={styles.diffSelectorRow}>
           <GameButton
-            title="← ANTERIOR"
+            title="FÁCIL"
             size="small"
-            variant="outline"
-            disabled={currentPuzzleIndex === 0}
-            onPress={() => loadPuzzle(currentPuzzleIndex - 1)}
-            style={styles.navBtn}
+            variant={currentDifficulty === 'easy' ? 'accent' : 'outline'}
+            onPress={() => startDifficultyRound('easy')}
+            style={styles.diffBtn}
           />
           <GameButton
-            title="REINICIAR"
+            title="MEDIO"
             size="small"
-            variant="outline"
-            onPress={retryPuzzle}
-            style={styles.navBtn}
+            variant={currentDifficulty === 'medium' ? 'accent' : 'outline'}
+            onPress={() => startDifficultyRound('medium')}
+            style={styles.diffBtn}
           />
           <GameButton
-            title="SIGUIENTE →"
+            title="DIFÍCIL"
             size="small"
-            variant="outline"
-            disabled={currentPuzzleIndex >= PUZZLE_CATALOG.length - 1}
-            onPress={nextPuzzle}
-            style={styles.navBtn}
+            variant={currentDifficulty === 'hard' ? 'accent' : 'outline'}
+            onPress={() => startDifficultyRound('hard')}
+            style={styles.diffBtn}
           />
         </View>
       </ScrollView>
@@ -172,6 +234,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     paddingHorizontal: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   titleColumn: {
     alignItems: 'center',
@@ -184,8 +248,12 @@ const styles = StyleSheet.create({
   },
   screenSubtitle: {
     color: '#94a3b8',
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
+  },
+  badgesGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   missionCard: {
     marginBottom: 10,
@@ -207,15 +275,30 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 13,
   },
-  starBadge: {
+  solvedBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+  },
+  starBadgeText: {
     color: '#eab308',
     fontWeight: '800',
-    fontSize: 12,
+    fontSize: 11,
   },
   boardContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 4,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   successCard: {
     backgroundColor: 'rgba(34, 197, 94, 0.12)',
@@ -226,9 +309,8 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     color: '#4ade80',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
-    marginBottom: 6,
   },
   failCard: {
     backgroundColor: 'rgba(239, 68, 68, 0.12)',
@@ -241,7 +323,6 @@ const styles = StyleSheet.create({
     color: '#f87171',
     fontSize: 15,
     fontWeight: '900',
-    marginBottom: 6,
   },
   feedbackText: {
     color: '#e2e8f0',
@@ -254,20 +335,35 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 4,
   },
-  completedAllText: {
-    color: '#eab308',
-    fontSize: 13,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginTop: 4,
+  completedCard: {
+    backgroundColor: 'rgba(234, 179, 8, 0.12)',
+    borderColor: 'rgba(234, 179, 8, 0.35)',
+    borderWidth: 1.5,
+    marginTop: 10,
+    alignItems: 'center',
+    padding: 16,
   },
-  navigationRow: {
+  completedTitle: {
+    color: '#facc15',
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  completedText: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  diffSelectorRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 14,
   },
-  navBtn: {
+  diffBtn: {
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: 3,
   },
 });

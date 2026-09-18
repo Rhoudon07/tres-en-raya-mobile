@@ -25,6 +25,9 @@ import { GameCard } from '../components/common/GameCard';
 import { Badge } from '../components/common/Badge';
 import { HapticService } from '../services/HapticService';
 import { useDisableAndroidBack } from '../hooks/useDisableAndroidBack';
+import { GameModeWalkthroughModal } from '../components/common/GameModeWalkthroughModal';
+import { WalkthroughService } from '../services/WalkthroughService';
+import { HelpCircle } from 'lucide-react-native';
 
 interface LabScreenProps {
   navigation: any;
@@ -36,6 +39,13 @@ export const LabScreen: React.FC<LabScreenProps> = ({ navigation }) => {
 
   const [rules, setRules] = useState<CustomGameRules>(createDefaultCustomRules());
   const [seedInput, setSeedInput] = useState<string>('');
+  const [walkthroughVisible, setWalkthroughVisible] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    WalkthroughService.hasSeen('Custom').then((seen) => {
+      if (!seen) setWalkthroughVisible(true);
+    });
+  }, []);
 
   const currentSeed = serializeRules(rules);
 
@@ -105,10 +115,21 @@ export const LabScreen: React.FC<LabScreenProps> = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Cabecera */}
         <View style={styles.header}>
-          <Text style={styles.title}>MODO LABORATORIO</Text>
-          <Text style={styles.subtitle}>
-            Sandbox y editor de reglas personalizadas
-          </Text>
+          <View style={styles.headerTitleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>MODO LABORATORIO</Text>
+              <Text style={styles.subtitle}>
+                Sandbox y editor de reglas personalizadas
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setWalkthroughVisible(true)}
+              style={styles.helpBtn}
+              accessibilityLabel="Ver tutorial de laboratorio"
+            >
+              <HelpCircle size={22} color={Colors.accentCyan} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Tarjeta de Semilla */}
@@ -425,6 +446,15 @@ export const LabScreen: React.FC<LabScreenProps> = ({ navigation }) => {
           />
         </View>
       </ScrollView>
+
+      <GameModeWalkthroughModal
+        visible={walkthroughVisible}
+        boardType={BoardType.Custom}
+        onClose={() => {
+          setWalkthroughVisible(false);
+          WalkthroughService.markSeen('Custom');
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -433,6 +463,19 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  helpBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#1b2234',
+    borderColor: '#26334d',
+    borderWidth: 1,
+    marginLeft: 8,
   },
   scrollContent: {
     padding: 16,

@@ -10,6 +10,7 @@ import { BoardGravity } from '../components/board/BoardGravity';
 import { Board3D } from '../components/board/Board3D';
 import { Board4D } from '../components/board/Board4D';
 import { BoardUltimate } from '../components/board/BoardUltimate';
+import { ReviewEngine } from '../game/review/ReviewEngine';
 import { ReviewCard } from '../components/review/ReviewCard';
 import { ReviewControls } from '../components/review/ReviewControls';
 import { AccuracyBar } from '../components/common/AccuracyBar';
@@ -24,6 +25,7 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
   useDisableAndroidBack();
   const boardType = useGameStore((state) => state.boardType);
   const moveHistory = useGameStore((state) => state.moveHistory || []);
+  const reviewReport = useGameStore((state) => state.reviewReport);
   const generateReviewReport = useGameStore((state) => state.generateReviewReport);
 
   const totalSteps = moveHistory.length;
@@ -34,16 +36,25 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
     setCurrentStep(totalSteps);
   }, [totalSteps]);
 
+  // Generar y persistir el reporte en el store fuera del ciclo de renderizado
+  useEffect(() => {
+    if (!reviewReport) {
+      generateReviewReport();
+    }
+  }, [reviewReport, generateReviewReport]);
+
   // Paso seguro garantizado dentro de [0, totalSteps]
   const safeStep = Math.max(0, Math.min(currentStep, totalSteps));
 
+  // Si ya existe el reporte en el store se usa; si no, se calcula de forma pura sin mutar estado durante el render
   const report = useMemo(() => {
+    if (reviewReport) return reviewReport;
     try {
-      return generateReviewReport();
+      return ReviewEngine.analyzeGame(boardType, moveHistory);
     } catch {
       return { analyses: [], accuracyX: 100, accuracyO: 100, moveHistory: [] };
     }
-  }, [boardType, moveHistory]);
+  }, [reviewReport, boardType, moveHistory]);
 
   // Reconstruir el estado del tablero hasta el paso actual de forma estrictamente segura
   const simBoard = useMemo(() => {

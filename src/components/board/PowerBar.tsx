@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { PowerType, PlayerPowers } from '../../types/powers';
 import { HapticService } from '../../services/HapticService';
+import { Bomb, RefreshCw, ShieldAlert, ArrowLeftRight } from 'lucide-react-native';
 
 interface PowerBarProps {
   powers: PlayerPowers;
@@ -13,39 +14,44 @@ interface PowerBarProps {
 
 interface PowerDef {
   type: PowerType;
-  icon: string;
+  iconComponent: React.ComponentType<{ size?: number; color?: string }>;
   name: string;
   desc: string;
+  color: string;
   isUsed: (p: PlayerPowers) => boolean;
 }
 
 const POWER_DEFS: PowerDef[] = [
   {
     type: PowerType.Bomb,
-    icon: '💥',
+    iconComponent: Bomb,
     name: 'BOMBA',
     desc: 'Toca cualquier ficha para destruirla',
+    color: '#ef4444',
     isUsed: (p) => p.bombUsed,
   },
   {
     type: PowerType.DoubleTurn,
-    icon: '🔄',
+    iconComponent: RefreshCw,
     name: '2X TURNO',
     desc: 'Coloca dos fichas consecutivas',
+    color: '#f59e0b',
     isUsed: (p) => p.doubleTurnUsed,
   },
   {
     type: PowerType.BlockCell,
-    icon: '🪨',
+    iconComponent: ShieldAlert,
     name: 'BLOQUEO',
     desc: 'Toca una casilla vacía para bloquearla',
+    color: Colors.accentCyan,
     isUsed: (p) => p.blockCellUsed,
   },
   {
     type: PowerType.Swap,
-    icon: '🔀',
+    iconComponent: ArrowLeftRight,
     name: 'SWAP',
     desc: 'Selecciona 2 fichas para intercambiarlas',
+    color: Colors.accentPink,
     isUsed: (p) => p.swapUsed,
   },
 ];
@@ -59,11 +65,6 @@ export const PowerBar: React.FC<PowerBarProps> = ({
   const hasUsed = !!powers.hasUsedPower;
 
   const handlePress = (power: PowerType) => {
-    if (disabled || hasUsed) {
-      HapticService.warning();
-      return;
-    }
-
     if (activePower === power) {
       onSelectPower(null);
       HapticService.selection();
@@ -87,6 +88,12 @@ export const PowerBar: React.FC<PowerBarProps> = ({
           const isBlocked = hasUsed && !isThisPowerUsed;
           const isButtonDisabled = disabled || hasUsed;
           const isSelected = activePower === p.type;
+          const IconComp = p.iconComponent;
+          const iconColor = (isThisPowerUsed || isBlocked)
+            ? Colors.textMuted
+            : isSelected
+            ? Colors.accentPink
+            : p.color;
 
           return (
             <Pressable
@@ -103,14 +110,9 @@ export const PowerBar: React.FC<PowerBarProps> = ({
                 isThisPowerUsed ? 'Usado' : isBlocked ? 'Bloqueado' : 'Disponible'
               }`}
             >
-              <Text
-                style={[
-                  styles.iconText,
-                  (isThisPowerUsed || isBlocked) && styles.iconUsed,
-                ]}
-              >
-                {p.icon}
-              </Text>
+              <View style={styles.iconWrapper}>
+                <IconComp size={20} color={iconColor} />
+              </View>
               <Text
                 style={[
                   styles.powerName,
@@ -139,7 +141,7 @@ export const PowerBar: React.FC<PowerBarProps> = ({
       {activeDef && !hasUsed && (
         <View style={styles.instructionBanner}>
           <Text style={styles.instructionText}>
-            {activeDef.icon} {activeDef.desc} (Toca de nuevo para cancelar)
+            {activeDef.desc} (Toca de nuevo para cancelar)
           </Text>
         </View>
       )}
@@ -195,12 +197,10 @@ const styles = StyleSheet.create({
   powerBtnPressed: {
     backgroundColor: Colors.cellHover,
   },
-  iconText: {
-    fontSize: 22,
-    marginBottom: 2,
-  },
-  iconUsed: {
-    opacity: 0.5,
+  iconWrapper: {
+    marginBottom: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   powerName: {
     fontSize: 10,

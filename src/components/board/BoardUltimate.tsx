@@ -4,6 +4,7 @@ import { BoardModel } from '../../game/board/BoardModel';
 import { Vector4i } from '../../types/board';
 import { Colors } from '../../constants/colors';
 import { MiniBoard2D } from './MiniBoard2D';
+import { WinningStrikeLine } from './WinningStrikeLine';
 
 interface BoardUltimateProps {
   board: BoardModel;
@@ -80,6 +81,16 @@ export const BoardUltimate: React.FC<BoardUltimateProps> = ({
             })}
           </View>
         ))}
+
+        {winningLine && winningLine.length >= 3 && (
+          <WinningStrikeLine
+            winningLine={winningLine.map((p) => ({ x: p.w, y: p.z, z: 0, w: 0 }))}
+            boardWidth={maxBoardWidth}
+            gridSize={3}
+            cellSize={miniSize}
+            padding={6}
+          />
+        )}
       </View>
     </View>
   );

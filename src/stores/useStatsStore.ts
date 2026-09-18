@@ -1,18 +1,39 @@
 import { create } from 'zustand';
 import { BoardType } from '../types/board';
-import { ModeStats, OverallStats } from '../types/game';
+import { ModeStats, OverallStats, GameMode } from '../types/game';
+import { Difficulty } from '../types/ai';
 import { StorageService } from '../services/StorageService';
+
+export interface MatchRecord {
+  id: string;
+  boardType: BoardType;
+  mode: GameMode;
+  difficulty?: Difficulty;
+  winner: 'X' | 'O' | 'D' | 'Y';
+  userSymbol: 'X' | 'O' | null;
+  result: 'win' | 'loss' | 'draw';
+  movesCount: number;
+  accuracy?: number;
+  timestamp: number;
+}
 
 interface StatsState {
   stats: OverallStats;
+  matchHistory: MatchRecord[];
   isLoaded: boolean;
   recordMatch: (
     type: BoardType,
-    winner: 'X' | 'O' | 'D',
+    winner: 'X' | 'O' | 'D' | 'Y',
     userSymbol: 'X' | 'O' | null, // null en CPU vs CPU
-    accuracyUser?: number
+    accuracyUser?: number,
+    extra?: {
+      mode?: GameMode;
+      difficulty?: Difficulty;
+      movesCount?: number;
+    }
   ) => void;
   updateLastMatchAccuracy: (type: BoardType, accuracyUser: number) => void;
+  clearHistory: () => Promise<void>;
   resetAllStats: () => Promise<void>;
   loadStats: (force?: boolean) => Promise<void>;
 }
@@ -56,9 +77,10 @@ const DEFAULT_STATS: OverallStats = {
 
 export const useStatsStore = create<StatsState>((set, get) => ({
   stats: { ...DEFAULT_STATS },
+  matchHistory: [],
   isLoaded: false,
 
-  recordMatch: (type, winner, userSymbol, accuracyUser) => {
+  recordMatch: (type, winner, userSymbol, accuracyUser, extra) => {
     const cur = get().stats;
     const mode = cur.byMode[type] ? { ...cur.byMode[type] } : createEmptyModeStats();
 
@@ -71,10 +93,18 @@ export const useStatsStore = create<StatsState>((set, get) => ({
     let newLosses = cur.losses;
     let newDraws = cur.draws;
 
-    if (userSymbol) {
-      if (winner === userSymbol) newWins += 1;
-      else if (winner === 'D') newDraws += 1;
-      else newLosses += 1;
+    let result: 'win' | 'loss' | 'draw' = 'draw';
+    if (winner === 'D') {
+      result = 'draw';
+      if (userSymbol) newDraws += 1;
+    } else if (userSymbol) {
+      if (winner === userSymbol) {
+        result = 'win';
+        newWins += 1;
+      } else {
+        result = 'loss';
+        newLosses += 1;
+      }
     }
 
     let newTotalAcc = cur.totalAccuracy;
@@ -87,7 +117,7 @@ export const useStatsStore = create<StatsState>((set, get) => ({
       newAccCount += 1;
     }
 
-    const updated: OverallStats = {
+    const updatedStats: OverallStats = {
       ...cur,
       gamesPlayed: cur.gamesPlayed + 1,
       wins: newWins,
@@ -101,8 +131,24 @@ export const useStatsStore = create<StatsState>((set, get) => ({
       },
     };
 
-    set({ stats: updated });
-    StorageService.setItem('overall_stats', updated);
+    const newRecord: MatchRecord = {
+      id: `match_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      boardType: type,
+      mode: extra?.mode || GameMode.PvCPU,
+      difficulty: extra?.difficulty,
+      winner,
+      userSymbol,
+      result,
+      movesCount: extra?.movesCount || 0,
+      accuracy: accuracyUser,
+      timestamp: Date.now(),
+    };
+
+    const updatedHistory = [newRecord, ...get().matchHistory].slice(0, 100);
+
+    set({ stats: updatedStats, matchHistory: updatedHistory });
+    StorageService.setItem('overall_stats', updatedStats);
+    StorageService.setItem('match_history', updatedHistory);
   },
 
   updateLastMatchAccuracy: (type: BoardType, accuracyUser: number) => {
@@ -115,7 +161,7 @@ export const useStatsStore = create<StatsState>((set, get) => ({
     const newTotalAcc = cur.totalAccuracy + accuracyUser;
     const newAccCount = cur.accuracyCount + 1;
 
-    const updated: OverallStats = {
+    const updatedStats: OverallStats = {
       ...cur,
       totalAccuracy: newTotalAcc,
       accuracyCount: newAccCount,
@@ -125,27 +171,44 @@ export const useStatsStore = create<StatsState>((set, get) => ({
       },
     };
 
-    set({ stats: updated });
-    StorageService.setItem('overall_stats', updated);
+    // Actualizar precisión en el registro de partida más reciente si no tenía
+    const history = [...get().matchHistory];
+    if (history.length > 0 && history[0].boardType === type && history[0].accuracy === undefined) {
+      history[0] = { ...history[0], accuracy: accuracyUser };
+    }
+
+    set({ stats: updatedStats, matchHistory: history });
+    StorageService.setItem('overall_stats', updatedStats);
+    StorageService.setItem('match_history', history);
+  },
+
+  clearHistory: async () => {
+    set({ matchHistory: [] });
+    await StorageService.removeItem('match_history');
   },
 
   resetAllStats: async () => {
-    set({ stats: { ...DEFAULT_STATS }, isLoaded: true });
+    set({ stats: { ...DEFAULT_STATS }, matchHistory: [], isLoaded: true });
     await StorageService.removeItem('overall_stats');
+    await StorageService.removeItem('match_history');
   },
 
   loadStats: async (force = false) => {
     if (!force && get().isLoaded) return;
-    const saved = await StorageService.getItem<OverallStats>('overall_stats', DEFAULT_STATS);
+    const [savedStats, savedHistory] = await Promise.all([
+      StorageService.getItem<OverallStats>('overall_stats', DEFAULT_STATS),
+      StorageService.getItem<MatchRecord[]>('match_history', []),
+    ]);
     set({
       stats: {
         ...DEFAULT_STATS,
-        ...(saved || {}),
+        ...(savedStats || {}),
         byMode: {
           ...DEFAULT_STATS.byMode,
-          ...(saved?.byMode || {}),
+          ...(savedStats?.byMode || {}),
         },
       },
+      matchHistory: Array.isArray(savedHistory) ? savedHistory : [],
       isLoaded: true,
     });
   },

@@ -8,6 +8,7 @@ interface BadgeProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   size?: 'small' | 'medium';
+  icon?: React.ReactNode;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
@@ -16,6 +17,7 @@ export const Badge: React.FC<BadgeProps> = ({
   style,
   textStyle,
   size = 'small',
+  icon,
 }) => {
   return (
     <View
@@ -29,6 +31,7 @@ export const Badge: React.FC<BadgeProps> = ({
         style,
       ]}
     >
+      {icon && <View style={styles.iconContainer}>{icon}</View>}
       <Text style={[styles.text, { color }, size === 'medium' && styles.textMedium, textStyle]}>
         {label}
       </Text>
@@ -38,13 +41,17 @@ export const Badge: React.FC<BadgeProps> = ({
 
 const styles = StyleSheet.create({
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
     alignSelf: 'flex-start',
-    alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconContainer: {
+    marginRight: 5,
   },
   medium: {
     paddingHorizontal: 14,

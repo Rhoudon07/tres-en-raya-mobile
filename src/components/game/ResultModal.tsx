@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Animated } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { CellSymbol } from '../../types/board';
 import { GameButton } from '../common/GameButton';
+import { Trophy, XCircle, MinusCircle, Star } from 'lucide-react-native';
 
 interface ResultModalProps {
   visible: boolean;
@@ -71,6 +72,16 @@ export const ResultModal: React.FC<ResultModalProps> = ({
     <Animated.View style={[styles.overlayContainer, { opacity: fadeAnim }]} pointerEvents="auto">
       <View style={styles.backdrop}>
         <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
+          <View style={styles.headerIconContainer}>
+            {winner === 'D' ? (
+              <MinusCircle size={38} color={Colors.winLine} />
+            ) : isDefeat ? (
+              <XCircle size={38} color={Colors.playerO} />
+            ) : (
+              <Trophy size={38} color={getHeaderColor()} />
+            )}
+          </View>
+
           <Text style={[styles.title, { color: getHeaderColor() }]}>
             {winner === 'D' ? 'EMPATE' : isDefeat ? 'DERROTA' : '¡VICTORIA!'}
           </Text>
@@ -80,15 +91,13 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           {campaignStars !== undefined && (
             <View style={styles.campaignStarsRow}>
               {[1, 2, 3].map((star) => (
-                <Text
-                  key={star}
-                  style={[
-                    styles.campaignStarIcon,
-                    star <= campaignStars && styles.campaignStarFilled,
-                  ]}
-                >
-                  ★
-                </Text>
+                <View key={star} style={{ marginHorizontal: 4 }}>
+                  <Star
+                    size={22}
+                    color={star <= campaignStars ? '#f59e0b' : '#334155'}
+                    fill={star <= campaignStars ? '#f59e0b' : 'transparent'}
+                  />
+                </View>
               ))}
               <Text style={styles.campaignStarsLabel}>
                 {campaignStars} de 3 Estrellas
@@ -162,6 +171,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 10,
+  },
+  headerIconContainer: {
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 26,

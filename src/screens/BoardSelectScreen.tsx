@@ -218,15 +218,17 @@ export const BoardSelectScreen: React.FC<BoardSelectScreenProps> = ({ navigation
                 pressed && { backgroundColor: '#1e2638' },
               ]}
             >
-              <View style={styles.cardHeader}>
-                <View>
-                  <Text style={[styles.cardCategory, { color: board.accentColor }]}>
-                    {board.category}
-                  </Text>
-                  <Text style={styles.cardTitle}>{board.title}</Text>
-                </View>
-                <Badge label={`${board.cells} CELDAS`} color={board.accentColor} />
+              <View style={styles.cardTopRow}>
+                <Text
+                  style={[styles.cardCategory, { color: board.accentColor }]}
+                  numberOfLines={1}
+                >
+                  {board.category}
+                </Text>
+                <Badge label={`${board.cells} CELDAS`} color={board.accentColor} style={styles.badge} />
               </View>
+
+              <Text style={styles.cardTitle}>{board.title}</Text>
 
               <Text style={styles.cardDesc}>{board.description}</Text>
 
@@ -291,22 +293,27 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  cardHeader: {
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
   },
   cardCategory: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
+    flex: 1,
+  },
+  badge: {
+    flexShrink: 0,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: '900',
     color: Colors.textPrimary,
-    marginTop: 2,
+    marginBottom: 4,
   },
   cardDesc: {
     fontSize: 13,

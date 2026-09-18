@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,6 +22,9 @@ import { PowerBar } from '../components/board/PowerBar';
 import { Badge } from '../components/common/Badge';
 import { useCampaignStore } from '../stores/useCampaignStore';
 import { CAMPAIGN_LEVELS } from '../types/campaign';
+import { GameModeWalkthroughModal } from '../components/common/GameModeWalkthroughModal';
+import { WalkthroughService } from '../services/WalkthroughService';
+import { Volume2, VolumeX, RotateCcw, X, HelpCircle } from 'lucide-react-native';
 
 interface GameScreenProps {
   navigation: any;
@@ -60,11 +63,47 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [earnedStars, setEarnedStars] = useState<number | undefined>(undefined);
+  const [walkthroughVisible, setWalkthroughVisible] = useState<boolean>(false);
+
+  const cpuSymbol = turnOrder === PlayerTurnOrder.First ? 'O' : 'X';
+  const lastCpuMove = useMemo(() => {
+    for (let i = moveHistory.length - 1; i >= 0; i--) {
+      if (moveHistory[i].symbol === cpuSymbol) {
+        return moveHistory[i].pos;
+      }
+    }
+    return null;
+  }, [moveHistory, cpuSymbol]);
+
+  // Apertura automática del tutorial en el primer ingreso al modo
+  useEffect(() => {
+    WalkthroughService.hasSeen(boardType).then((seen) => {
+      if (!seen) {
+        setWalkthroughVisible(true);
+      }
+    });
+  }, [boardType]);
+
+  // Limpieza de memoria al desmontar la pantalla para evitar acumulación
+  useEffect(() => {
+    return () => {
+      useGameStore.setState({
+        isCpuThinking: false,
+        activePower: null,
+        powerTargetFirst: null,
+        selectedPiece: null,
+      });
+    };
+  }, []);
 
   // Sincronizar visibilidad del modal de resultado y evaluar progresión de campaña
   useEffect(() => {
     if (gameOver) {
-      setResultModalVisible(true);
+      // Retardo estético de 700ms para permitir que la animación de la línea ganadora se trace y luzca en el tablero
+      const modalTimer = setTimeout(() => {
+        setResultModalVisible(true);
+      }, 700);
+
       if (activeCampaignLevelId !== null) {
         const level = CAMPAIGN_LEVELS.find((l) => l.id === activeCampaignLevelId);
         const winner =
@@ -105,11 +144,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
       } else {
         setEarnedStars(undefined);
       }
+
+      return () => clearTimeout(modalTimer);
     } else {
       setResultModalVisible(false);
       setEarnedStars(undefined);
     }
-  }, [gameOver]);
+  }, [gameOver, activeCampaignLevelId, winningLine, resultMessage, moveHistory, reviewReport, board]);
 
   const handleExitGame = () => {
     if (gameOver) {
@@ -130,6 +171,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
+        if (walkthroughVisible) {
+          setWalkthroughVisible(false);
+          WalkthroughService.markSeen(boardType);
+          return true;
+        }
         if (exitModalVisible) {
           setExitModalVisible(false);
           return true;
@@ -144,7 +190,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [exitModalVisible, resultModalVisible, gameOver, activeCampaignLevelId])
+    }, [walkthroughVisible, exitModalVisible, resultModalVisible, gameOver, activeCampaignLevelId, boardType])
   );
 
   const handleCellPress = (pos: any) => {
@@ -207,6 +253,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
             onCellPress={handleCellPress}
             winningLine={winningLine}
             disabled={isCpuThinking || gameOver}
+            lastCpuMove={lastCpuMove}
           />
         );
       case BoardType.Ultimate:
@@ -233,7 +280,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
 
           <View style={styles.topActions}>
             <GameButton
-              title={soundEnabled ? '🔊' : '🔇'}
+              icon={<HelpCircle size={17} color={Colors.accentCyan} />}
+              title=""
+              size="small"
+              variant="outline"
+              onPress={() => setWalkthroughVisible(true)}
+              style={styles.iconBtn}
+              accessibilityLabel="Ver tutorial de la modalidad"
+            />
+            <GameButton
+              icon={
+                soundEnabled ? (
+                  <Volume2 size={17} color={Colors.accentCyan} />
+                ) : (
+                  <VolumeX size={17} color={Colors.textMuted} />
+                )
+              }
+              title=""
               size="small"
               variant="outline"
               onPress={() => setSoundEnabled(!soundEnabled)}
@@ -241,7 +304,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
               accessibilityLabel="Alternar sonido"
             />
             <GameButton
-              title="↺"
+              icon={<RotateCcw size={17} color={Colors.textPrimary} />}
+              title=""
               size="small"
               variant="outline"
               onPress={restartCurrentGame}
@@ -249,7 +313,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
               accessibilityLabel="Reiniciar partida"
             />
             <GameButton
-              title="✕"
+              icon={<X size={17} color={Colors.playerO} />}
+              title=""
               size="small"
               variant="outline"
               onPress={handleExitGame}
@@ -406,6 +471,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
           restartCurrentGame();
         }}
         onAnalyze={() => {
+          useGameStore.getState().generateReviewReport();
           setResultModalVisible(false);
           navigation.navigate('Review');
         }}
@@ -435,6 +501,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
           }
         }}
         onCancel={() => setExitModalVisible(false)}
+      />
+
+      {/* Modal de Tutorial / Walkthrough de la Modalidad */}
+      <GameModeWalkthroughModal
+        visible={walkthroughVisible}
+        boardType={boardType}
+        onClose={() => {
+          setWalkthroughVisible(false);
+          WalkthroughService.markSeen(boardType);
+        }}
       />
     </SafeAreaView>
   );

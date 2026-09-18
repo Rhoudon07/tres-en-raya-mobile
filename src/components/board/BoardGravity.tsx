@@ -4,6 +4,7 @@ import { BoardModel } from '../../game/board/BoardModel';
 import { Vector4i, areVectorsEqual } from '../../types/board';
 import { Colors } from '../../constants/colors';
 import { Cell2D } from './Cell2D';
+import { WinningStrikeLine } from './WinningStrikeLine';
 
 interface BoardGravityProps {
   board: BoardModel;
@@ -104,6 +105,17 @@ export const BoardGravity: React.FC<BoardGravityProps> = ({
             })}
           </View>
         ))}
+
+        {winningLine && winningLine.length >= 3 && (
+          <WinningStrikeLine
+            winningLine={winningLine}
+            boardWidth={maxBoardWidth}
+            gridSize={gridSize}
+            cellSize={cellSize}
+            padding={8 + 4}
+            gap={8}
+          />
+        )}
       </View>
     </View>
   );

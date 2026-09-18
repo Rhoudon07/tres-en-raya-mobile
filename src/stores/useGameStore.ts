@@ -407,7 +407,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const userSymbol = state.mode === GameMode.PvCPU
         ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
         : state.mode === GameMode.PvP ? 'X' : null;
-      useStatsStore.getState().recordMatch(state.boardType, winner as any, userSymbol);
+      const diff = useSettingsStore.getState().difficulties[state.boardType];
+      useStatsStore.getState().recordMatch(state.boardType, winner as any, userSymbol, undefined, {
+        mode: state.mode,
+        difficulty: diff,
+        movesCount: updatedHistory.length,
+      });
 
       const currentBoardType = state.boardType;
       set({
@@ -423,22 +428,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         doubleTurnRemaining: 0,
         playerPowers: powersToUpdate,
       });
-
-      setTimeout(() => {
-        try {
-          const report = ReviewEngine.analyzeGame(currentBoardType, updatedHistory);
-          const currentState = get();
-          if (currentState.gameOver && currentState.moveHistory === updatedHistory) {
-            set({ reviewReport: report });
-            const userAcc = userSymbol === 'X' ? report.accuracyX : userSymbol === 'O' ? report.accuracyO : undefined;
-            if (typeof userAcc === 'number') {
-              useStatsStore.getState().updateLastMatchAccuracy(currentBoardType, userAcc);
-            }
-          }
-        } catch {
-          // No bloqueante
-        }
-      }, 50);
 
       return true;
     }
@@ -529,7 +518,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const userSymbol = state.mode === GameMode.PvCPU
         ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
         : state.mode === GameMode.PvP ? 'X' : null;
-      useStatsStore.getState().recordMatch(state.boardType, winner as 'X' | 'O' | 'D', userSymbol);
+      const diff = useSettingsStore.getState().difficulties[state.boardType];
+      useStatsStore.getState().recordMatch(state.boardType, winner as 'X' | 'O' | 'D', userSymbol, undefined, {
+        mode: state.mode,
+        difficulty: diff,
+        movesCount: updatedHistory.length,
+      });
 
       const currentBoardType = state.boardType;
       set({
@@ -542,22 +536,6 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         reviewReport: null,
         selectedPiece: null,
       });
-
-      setTimeout(() => {
-        try {
-          const report = ReviewEngine.analyzeGame(currentBoardType, updatedHistory);
-          const currentState = get();
-          if (currentState.gameOver && currentState.moveHistory === updatedHistory) {
-            set({ reviewReport: report });
-            const userAcc = userSymbol === 'X' ? report.accuracyX : userSymbol === 'O' ? report.accuracyO : undefined;
-            if (typeof userAcc === 'number') {
-              useStatsStore.getState().updateLastMatchAccuracy(currentBoardType, userAcc);
-            }
-          }
-        } catch {
-          // No bloqueante
-        }
-      }, 50);
 
       return true;
     }
@@ -587,7 +565,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       const userSymbol = state.mode === GameMode.PvCPU
         ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
         : state.mode === GameMode.PvP ? 'X' : null;
-      useStatsStore.getState().recordMatch(state.boardType, curSymbol as 'X' | 'O', userSymbol);
+      const diff = useSettingsStore.getState().difficulties[state.boardType];
+      useStatsStore.getState().recordMatch(state.boardType, curSymbol as 'X' | 'O', userSymbol, undefined, {
+        mode: state.mode,
+        difficulty: diff,
+        movesCount: updatedHistory.length,
+      });
 
       set({
         board: state.board.clone(),
@@ -641,7 +624,12 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     const userSymbol = state.mode === GameMode.PvCPU
       ? (state.turnOrder === PlayerTurnOrder.First ? 'X' : 'O')
       : state.mode === GameMode.PvP ? 'X' : null;
-    useStatsStore.getState().recordMatch(state.boardType, winner, userSymbol);
+    const diff = useSettingsStore.getState().difficulties[state.boardType];
+    useStatsStore.getState().recordMatch(state.boardType, winner, userSymbol, undefined, {
+      mode: state.mode,
+      difficulty: diff,
+      movesCount: state.moveHistory.length,
+    });
 
     set({
       gameOver: true,
@@ -732,6 +720,21 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     if (state.reviewReport) return state.reviewReport;
     const report = ReviewEngine.analyzeGame(state.boardType, state.moveHistory);
     set({ reviewReport: report });
+
+    const userSymbol =
+      state.mode === GameMode.PvCPU
+        ? state.turnOrder === PlayerTurnOrder.First
+          ? 'X'
+          : 'O'
+        : state.mode === GameMode.PvP
+        ? 'X'
+        : null;
+    const userAcc =
+      userSymbol === 'X' ? report.accuracyX : userSymbol === 'O' ? report.accuracyO : undefined;
+    if (typeof userAcc === 'number') {
+      useStatsStore.getState().updateLastMatchAccuracy(state.boardType, userAcc);
+    }
+
     return report;
   },
 }));

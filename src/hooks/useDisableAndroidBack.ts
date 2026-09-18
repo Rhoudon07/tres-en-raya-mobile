@@ -1,21 +1,32 @@
 import React from 'react';
 import { BackHandler } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 /**
- * Hook para bloquear el botón 'ir atrás' del sistema Android.
- * Evita la navegación hacia atrás por hardware, obligando a usar los botones de la interfaz.
+ * Hook para gestionar el botón 'ir atrás' de hardware en Android.
+ * Permite retroceder de manera fluida y natural a la pantalla previa.
  */
-export function useDisableAndroidBack() {
+export function useAndroidBackHandler(onBack?: () => boolean) {
+  const navigation = useNavigation<any>();
+
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        // Bloquear acción de volver atrás
-        return true;
+        if (onBack) {
+          return onBack();
+        }
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+          return true;
+        }
+        return false;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => subscription.remove();
-    }, [])
+    }, [navigation, onBack])
   );
 }
+
+// Alias para preservar compatibilidad con pantallas existentes
+export const useDisableAndroidBack = useAndroidBackHandler;
